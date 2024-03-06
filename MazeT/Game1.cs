@@ -9,14 +9,21 @@ namespace MazeT
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+        private Texture2D randomSprite;
+
 
         public Game1()
         {
+            
             _graphics = new GraphicsDeviceManager(this);
+            _graphics.PreferredBackBufferWidth = 1280; // Set your desired width
+            _graphics.PreferredBackBufferHeight = 720; // Set your desired height
+            _graphics.ApplyChanges();
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            
         }
-
+        
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
@@ -29,6 +36,7 @@ namespace MazeT
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
+            randomSprite = Content.Load<Texture2D>("spike");
         }
 
         protected override void Update(GameTime gameTime)
@@ -44,8 +52,10 @@ namespace MazeT
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
             // TODO: Add your drawing code here
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(randomSprite, new Vector2(50, 50), Color.White);
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
