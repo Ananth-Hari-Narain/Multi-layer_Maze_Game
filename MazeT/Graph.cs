@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -89,6 +90,16 @@ namespace MazeT
         public int height { get { return _height; } }
 
         /// <summary>
+        /// Size in pixels
+        /// </summary>
+        public readonly int tileSize = 20;
+
+        /// <summary>
+        /// Size in pixels
+        /// </summary>
+        public readonly int mazeWallWidth = 5;
+
+        /// <summary>
         /// Generate the maze using a chosen algorithm
         /// </summary>
         public Maze(int width, int height, MazeAlgorithms algorithm = MazeAlgorithms.BLANK)
@@ -124,7 +135,7 @@ namespace MazeT
                     if (!_tiles[x, y].up)
                     {
                         //Draw a rectangle upwards
-                        spriteBatch.Draw()
+                        spriteBatch.Draw(rectColour, new Rectangle(20 * x, 5 * y, tileSize, mazeWallWidth), Color.White);
                     }
                 }
             }
