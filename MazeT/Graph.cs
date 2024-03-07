@@ -92,12 +92,22 @@ namespace MazeT
         /// <summary>
         /// Size in pixels
         /// </summary>
-        public readonly int tileSize = 20;
+        public readonly int tileSize = 60;
 
         /// <summary>
         /// Size in pixels
         /// </summary>
-        public readonly int mazeWallWidth = 5;
+        public readonly int mazeWallWidth = 10;
+
+        /// <summary>
+        /// Where the topleft corner of the maze is positioned
+        /// </summary>
+        public readonly int xOffset = 30;
+
+        /// <summary>
+        /// Where the topleft corner of the maze is positioned
+        /// </summary>
+        public readonly int yOffset = 30;
 
         /// <summary>
         /// Generate the maze using a chosen algorithm
@@ -113,10 +123,32 @@ namespace MazeT
         private Tile[,] BlankCreation(int width, int height)
         {
             Tile[,] newTiles = new Tile[width, height];
-            for (int i = 0; i <_height; i++)
+            //Initialise all of the new tiles
+            for (int x = 0; x < _width; x++)
             {
-                newTiles[1, i].left = false;                
-            }
+                for (int y = 0; y < _height; y++)
+                {
+                    newTiles[x, y] = new Tile(new bool[] { true, true, true, true });
+                    if (x == 0)
+                    {
+                        newTiles[x, y].left = false;
+                    }
+                    else if (x==9)
+                    {
+                        newTiles[x, y].right = false;
+                    }
+                    
+                    if (y == 0)
+                    {
+                        newTiles[x, y].up = false;
+                    }
+                    else if (y == 9)
+                    {
+                        newTiles[x, y].down = false;
+                    }
+                }
+            }                      
+
             return newTiles;
         }
 
@@ -134,11 +166,28 @@ namespace MazeT
                 {
                     if (!_tiles[x, y].up)
                     {
-                        //Draw a rectangle upwards
-                        spriteBatch.Draw(rectColour, new Rectangle(20 * x, 5 * y, tileSize, mazeWallWidth), Color.White);
+                        //Draw a rectangle above the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, tileSize, mazeWallWidth), Color.White);
+                    }
+                    if (!_tiles[x, y].down)
+                    {
+                        //Draw a rectangle below the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y+1) + yOffset, tileSize, mazeWallWidth), Color.White);
+                    }
+                    if (!_tiles[x, y].left)
+                    {
+                        //Draw a rectangle to the left of the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                    }
+                    if (!_tiles[x, y].right)
+                    {
+                        //Draw a rectangle to the right of the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x+1) + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
                     }
                 }
             }
+
+            //End the spritebatch afterwards.
         }
     }
 }

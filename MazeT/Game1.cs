@@ -9,7 +9,8 @@ namespace MazeT
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-        private Texture2D randomSprite;
+        private Texture2D wall;
+        private Maze maze;
 
 
         public Game1()
@@ -29,6 +30,7 @@ namespace MazeT
             // TODO: Add your initialization logic here
 
             base.Initialize();
+            maze = new Maze(10, 10);
         }
 
         protected override void LoadContent()
@@ -36,7 +38,8 @@ namespace MazeT
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
-            randomSprite = Content.Load<Texture2D>("spike");
+            wall = new Texture2D(GraphicsDevice, 1, 1);
+            wall.SetData(new Color[] { Color.White });
         }
 
         protected override void Update(GameTime gameTime)
@@ -51,10 +54,10 @@ namespace MazeT
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Black);
             // TODO: Add your drawing code here
             _spriteBatch.Begin();
-            _spriteBatch.Draw(randomSprite, new Vector2(50, 50), Color.White);
+            maze.displayMaze(_spriteBatch, wall);
             _spriteBatch.End();
 
             base.Draw(gameTime);
