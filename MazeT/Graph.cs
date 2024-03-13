@@ -133,11 +133,11 @@ namespace MazeT
                     {
                         newTiles[x, y].left = false;
                     }
-                    else if (x==9)
+                    else if (x == 9)
                     {
                         newTiles[x, y].right = false;
                     }
-                    
+
                     if (y == 0)
                     {
                         newTiles[x, y].up = false;
@@ -146,10 +146,32 @@ namespace MazeT
                     {
                         newTiles[x, y].down = false;
                     }
+
+                    if (x == 3 && y == 4)
+                    {
+                        newTiles[x, y].right = false;
+                        newTiles[x, y].left = false;
+                        newTiles[x, y].down = false;
+                    }
+                    else if (x == 7 && y == 4)
+                    {
+                        newTiles[x, y].up = false;
+                        newTiles[x, y].down = false;
+                    }
                 }
             }                      
 
             return newTiles;
+        }
+
+        private Tile[,] WilsonAlgorithm(int width, int height)
+        {
+            Tile[,] maze = new Tile[width, height];            
+            //Choose a random cell
+            Random rng = new Random();
+            Point start = new Point(rng.Next(0, width), rng.Next(0, height));
+
+            return new Tile[width, height];
         }
 
         /// <summary>
@@ -172,7 +194,7 @@ namespace MazeT
                     if (!_tiles[x, y].down)
                     {
                         //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y+1) + yOffset, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset-mazeWallWidth, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y].left)
                     {
