@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
+using System.Diagnostics.SymbolStore;
 
 namespace MazeT
 {
@@ -65,10 +66,22 @@ namespace MazeT
             set { tileConnections[3] = value; }
         }
 
+        public bool below
+        {
+            get { return tileConnections[4]; }
+            set { tileConnections[4] = value; }
+        }
+
+        public bool above
+        {
+            get { return tileConnections[5]; }
+            set { tileConnections[5] = value; }
+        }
+
         public Tile()
         {
             _tileType = TileTypes.BLANK;
-            tileConnections = new bool[] { false, false, false, false };
+            tileConnections = new bool[] { false, false, false, false, false, false };
         }
 
         public Tile(bool[] tileConnections, TileTypes tileType = TileTypes.BLANK)
@@ -77,23 +90,26 @@ namespace MazeT
             this.tileConnections = tileConnections;
         }
 
-        public Tile(bool up, bool down, bool left, bool right, TileTypes tileType = TileTypes.BLANK)
+        public Tile(bool up, bool down, bool left, bool right, bool below, bool above, TileTypes tileType = TileTypes.BLANK)
         {
             _tileType = tileType;
-            tileConnections = new bool[]{ up, down, left, right };
+            tileConnections = new bool[]{ up, down, left, right, below, above };
         }      
     }
 
     internal class Maze
     {
-        private Tile[,] _tiles;
-        public Tile[,] tiles { get { return _tiles; } }
+        private Tile[,,] _tiles;
+        public Tile[,,] tiles { get { return _tiles; } }
 
         private int _width;
         public int width { get { return _width; } }
 
         private int _height;
         public int height { get { return _height; } }
+
+        private int _currentLayer;
+        public int currentLayer { get; set; }
 
         /// <summary>
         /// Size in pixels
@@ -122,48 +138,49 @@ namespace MazeT
         {
             _width = width;
             _height = height;
-            _tiles = new Tile[width, height];
+            currentLayer = 0;
+            _tiles = new Tile[width, height, 2]; //2 layer maze
             WilsonAlgorithm(width, height);
+            BlankCreation(width, height);
         }
 
         //Generate a tester maze
         private void BlankCreation(int width, int height)
         {
-            _tiles.Initialize();
             //Initialise all of the new tiles
             for (int x = 0; x < _width; x++)
             {
                 for (int y = 0; y < _height; y++)
                 {
-                    _tiles[x, y] = new Tile(new bool[] { true, true, true, true });
+                    _tiles[x, y, 1] = new Tile(new bool[] { true, true, true, true });
                     if (x == 0)
                     {
-                        _tiles[x, y].left = false;
+                        _tiles[x, y, 1].left = false;
                     }
                     else if (x == 9)
                     {
-                        _tiles[x, y].right = false;
+                        _tiles[x, y, 1].right = false;
                     }
 
                     if (y == 0)
                     {
-                        _tiles[x, y].up = false;
+                        _tiles[x, y, 1].up = false;
                     }
                     else if (y == 9)
                     {
-                        _tiles[x, y].down = false;
+                        _tiles[x, y, 1].down = false;
                     }
 
                     if (x == 3 && y == 4)
                     {
-                        _tiles[x, y].right = false;
-                        _tiles[x, y].left = false;
-                        _tiles[x, y].down = false;
+                        _tiles[x, y, 1].right = false;
+                        _tiles[x, y, 1].left = false;
+                        _tiles[x, y, 1].down = false;
                     }
                     else if (x == 7 && y == 4)
                     {
-                        _tiles[x, y].up = false;
-                        _tiles[x, y].down = false;
+                        _tiles[x, y, 1].up = false;
+                        _tiles[x, y, 1].down = false;
                     }
                 }
             }
@@ -185,8 +202,7 @@ namespace MazeT
         }
 
         private void WilsonAlgorithm(int width, int height)
-        {
-            
+        {            
             Tile[,] currentWalk = new Tile[width, height];
             bool[,] isVisited = new bool[width, height];
             bool[,] isPartOfMaze = new bool[width, height];
@@ -197,7 +213,7 @@ namespace MazeT
             {
                 for (int j=0; j < height; j++)
                 {
-                    tiles[i, j] = new Tile();
+                    tiles[i, j, 0] = new Tile();
                     currentWalk[i, j] = new Tile();
                     isVisited[i, j] = false;
                     isPartOfMaze[i, j] = false;
@@ -214,8 +230,6 @@ namespace MazeT
             int currentY = 0;
 
             int direction;
-
-            int test = 0;
             do
             {
                 //Start at a point that's not part of the maze, setting the value of isVisited to true.
@@ -240,7 +254,7 @@ namespace MazeT
                     //Add the current node to the isVisited list
                     isVisited[currentX, currentY] = true;
                     //Choose a random adjacent cell to the current tile.
-                    direction = rng.Next(0, 4);
+                    direction = rng.Next(0, 6);
                     if (direction == 0)
                     {
                         //Try and move up, otherwise move down
@@ -308,8 +322,7 @@ namespace MazeT
                         }
                     }
 
-                    //If direction == 2
-                    else
+                    else if (direction == 2)
                     {
                         //Try and move left, otherwise move right
                         if (currentX != 0)
@@ -329,6 +342,13 @@ namespace MazeT
                             currentX++;
                             direction = 3;
                         }
+                    }
+
+                    else if (direction == 4)
+                    {
+                        //Try going to the layer below
+
+
                     }
 
                     //Determine if the current tile has been visited or not
@@ -356,7 +376,7 @@ namespace MazeT
                         //Add it to the maze and reset the tile
                         if (isVisited[x, y])
                         {
-                            currentWalk[x, y].tileConnections.CopyTo(_tiles[x, y].tileConnections, 0);                            
+                            currentWalk[x, y].tileConnections.CopyTo(_tiles[x, y, 0].tileConnections, 0);                            
                             currentWalk[x, y].tileConnections = new bool[]{ false, false, false, false};
                             isVisited[x, y] = false;
                             isPartOfMaze[x, y] = true;
@@ -367,8 +387,8 @@ namespace MazeT
                 //Flip the direction since it will not connect correctly otherwise
                 //We can do this by flipping the last bit. 
                 direction = direction ^ 1;
-                _tiles[currentX, currentY].tileConnections[direction] = true;
-                test++;
+                _tiles[currentX, currentY, 0].tileConnections[direction] = true;
+
             } while (!isBoolArrayFilled(isPartOfMaze, true));
                                     
         }
@@ -378,32 +398,66 @@ namespace MazeT
         /// </summary>
         /// <param name="spriteBatch">The spritebatch being used</param>
         /// <param name="rectColour">The one pixel used to display a rectangle</param>
-        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour)
+        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour, int layer)
         {
             //Assumes one has begun the sprite batch
             for (int x = 0; x < _width; x++)
             {
                 for (int y  = 0; y < _height; y++)
                 {
-                    if (!_tiles[x, y].up)
+                    if (!_tiles[x, y, layer].up)
                     {
                         //Draw a rectangle above the tile
                         spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, tileSize, mazeWallWidth), Color.White);
                     }
-                    if (!_tiles[x, y].down)
+                    if (!_tiles[x, y, layer].down)
                     {
                         //Draw a rectangle below the tile
                         spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset-mazeWallWidth, tileSize, mazeWallWidth), Color.White);
                     }
-                    if (!_tiles[x, y].left)
+                    if (!_tiles[x, y, layer].left)
                     {
                         //Draw a rectangle to the left of the tile
                         spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
                     }
-                    if (!_tiles[x, y].right)
+                    if (!_tiles[x, y, layer].right)
                     {
                         //Draw a rectangle to the right of the tile
                         spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x+1) + xOffset-mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                    }
+                }
+            }
+
+            //End the spritebatch afterwards.
+        }
+
+        //Display current layer
+        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour)
+        {
+            //Assumes one has begun the sprite batch
+            for (int x = 0; x < _width; x++)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    if (!_tiles[x, y, currentLayer].up)
+                    {
+                        //Draw a rectangle above the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, tileSize, mazeWallWidth), Color.White);
+                    }
+                    if (!_tiles[x, y, currentLayer].down)
+                    {
+                        //Draw a rectangle below the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
+                    }
+                    if (!_tiles[x, y, currentLayer].left)
+                    {
+                        //Draw a rectangle to the left of the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                    }
+                    if (!_tiles[x, y, currentLayer].right)
+                    {
+                        //Draw a rectangle to the right of the tile
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) + xOffset - mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
                     }
                 }
             }

@@ -12,7 +12,7 @@ namespace MazeT
         private Texture2D wall;
         private Maze maze;
 
-
+        private KeyboardState previousState;
         public Game1()
         {
             
@@ -31,6 +31,7 @@ namespace MazeT
 
             base.Initialize();
             maze = new Maze(10, 10);
+            previousState = Keyboard.GetState();
         }
 
         protected override void LoadContent()
@@ -48,6 +49,13 @@ namespace MazeT
                 Exit();
 
             // TODO: Add your update logic here
+            KeyboardState currentKeys = Keyboard.GetState();
+            if (currentKeys.IsKeyDown(Keys.Space) && !previousState.IsKeyDown(Keys.Space))
+            {
+                maze.currentLayer = (maze.currentLayer + 1) % 2;
+            }
+
+            previousState = Keyboard.GetState();
             
             base.Update(gameTime);
         }
