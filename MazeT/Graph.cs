@@ -7,10 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Globalization;
 using System.Diagnostics.SymbolStore;
+using System.Security.Cryptography;
 
 namespace MazeT
 {
-    
     enum TileTypes
     {
         TP_PAD = 0,
@@ -33,8 +33,8 @@ namespace MazeT
     {
         //Is the tile special or not
         private TileTypes _tileType;
-        public TileTypes tileType { get {  return _tileType; } }
-        
+        public TileTypes tileType { get { return _tileType; } }
+
         //An adjacency list of sorts
         /// <summary>
         /// Checks if the tile is connected to tile up, down, left, or right
@@ -93,14 +93,14 @@ namespace MazeT
         public Tile(bool up, bool down, bool left, bool right, bool below, bool above, TileTypes tileType = TileTypes.BLANK)
         {
             _tileType = tileType;
-            tileConnections = new bool[]{ up, down, left, right, below, above };
-        }      
+            tileConnections = new bool[] { up, down, left, right, below, above };
+        }
     }
 
     internal class Maze
     {
         private Tile[,,] _tiles;
-        public Tile[,,] tiles { get { return _tiles; } }
+        public Tile[,,] tiles { get { return _tiles; } set { _tiles = value; } }
 
         private int _width;
         public int width { get { return _width; } }
@@ -110,6 +110,9 @@ namespace MazeT
 
         private int _currentLayer;
         public int currentLayer { get; set; }
+
+        private int _maxLayers;
+        public int maxLayers { get; set; }
 
         /// <summary>
         /// Size in pixels
@@ -134,14 +137,15 @@ namespace MazeT
         /// <summary>
         /// Generate the maze using a chosen algorithm
         /// </summary>
-        public Maze(int width, int height, MazeAlgorithms algorithm = MazeAlgorithms.BLANK)
+        public Maze(int width, int height, int layers = 2, MazeAlgorithms algorithm = MazeAlgorithms.BLANK)
         {
             _width = width;
             _height = height;
             currentLayer = 0;
-            _tiles = new Tile[width, height, 2]; //2 layer maze
-            WilsonAlgorithm(width, height);
-            BlankCreation(width, height);
+            maxLayers = layers;
+            _tiles = new Tile[width, height, layers]; //2 layer maze
+            WilsonAlgorithm();
+            // BlankCreation(width, height);
         }
 
         //Generate a tester maze
@@ -186,92 +190,128 @@ namespace MazeT
             }
         }
 
-        private static bool isBoolArrayFilled(bool[,] array, bool value)
+        public static bool isBoolArrayFilled(bool[,,] array, bool value)
         {
             for (int x = 0; x < array.GetLength(0); x++)
             {
                 for (int y = 0; y < array.GetLength(1); y++)
                 {
-                    if (array[x, y] != value)
-                    {
-                        return false;
-                    }
+                    for (int z = 0; z < array.GetLength(2); z++)
+                        if (array[x, y, z] != value)
+                        {
+                            return false;
+                        }
                 }
             }
             return true;
         }
 
-        private void WilsonAlgorithm(int width, int height)
-        {            
-            Tile[,] currentWalk = new Tile[width, height];
-            bool[,] isVisited = new bool[width, height];
-            bool[,] isPartOfMaze = new bool[width, height];
+        private void WilsonAlgorithm()
+        {
+            Tile[,,] currentWalk = new Tile[width, height, maxLayers];
+            bool[,,] isVisited = new bool[width, height, maxLayers];
+            bool[,,] isPartOfMaze = new bool[width, height, maxLayers];
 
             //Initialise all the values in the arrays
             //including the member _tiles
             for (int i = 0; i < width; i++)
             {
-                for (int j=0; j < height; j++)
+                for (int j = 0; j < height; j++)
                 {
-                    tiles[i, j, 0] = new Tile();
-                    currentWalk[i, j] = new Tile();
-                    isVisited[i, j] = false;
-                    isPartOfMaze[i, j] = false;
+                    for (int k = 0; k < maxLayers; k++)
+                    {
+                        tiles[i, j, k] = new Tile();
+                        currentWalk[i, j, k] = new Tile();
+                        isVisited[i, j, k] = false;
+                        isPartOfMaze[i, j, k] = false;
+                    }                   
                 }
             }
 
-            //Choose a random cell to be the first cell in the maze
-            Random rng = new Random();
-            int initialX = rng.Next(width/2, width);
-            int initialY = rng.Next(height/2, height);
-            isPartOfMaze[initialX, initialY] = true;
+            //Set the middle on the base floor as part of maze
+            isPartOfMaze[width/2, height/2, 0] = true;
 
             int currentX = 0;
             int currentY = 0;
+            int currentZ = 0;
 
-            int direction;
+            int direction = 0;
+            int randomNumber = 0;
+            bool hasUsedTPPad = false;
+            int maxTPpads = 11;
+            int totalTPPads = 0;
+            int noTPPadsInCurrentWalk = 0;
+            int walkLength = 0;
+            Random rng = new Random();
+
             do
             {
-                //Start at a point that's not part of the maze, setting the value of isVisited to true.
-                bool continueForLoop = true;
-                for (int  x = 0; x < width && continueForLoop; x++)
+                bool _continue = true;
+                for (int x = 0; x < width && _continue; x++)
                 {
-                    for (int y = 0; y < height && continueForLoop; y++)
+                    for (int y = 0; y < height && _continue; y++)
                     {
-                        if (!isPartOfMaze[x, y])
+                        for (int z = 0; z < maxLayers && _continue; z++)
                         {
-                            //Add that to the isVisited list
-                            isVisited[x, y] = true;
-                            currentX = x;
-                            currentY = y;
-                            continueForLoop = false;
+                            if (!isPartOfMaze[x, y, z])
+                            {
+                                isVisited[x, y, z] = true;
+                                currentX = x;
+                                currentY = y;
+                                currentZ = z;
+                                _continue = false;
+                            }
                         }
                     }
-                }
+                }                
 
                 do
                 {
-                    //Add the current node to the isVisited list
-                    isVisited[currentX, currentY] = true;
-                    //Choose a random adjacent cell to the current tile.
-                    direction = rng.Next(0, 6);
+                    //Add the current tile to the isVisited list
+                    isVisited[currentX, currentY, currentZ] = true;
+                    do
+                    {
+                        if (!hasUsedTPPad && totalTPPads < maxTPpads && walkLength > 2)
+                        {
+                            //Tile can only connect layers after it has travelled for
+                            //enough time across the layer
+                            randomNumber = rng.Next(0, 6);
+                        }
+                        else
+                        {
+                            randomNumber = rng.Next(0, 4);
+                        }
+                    } while (randomNumber == direction); //Prevents the maze from backtracking on itself
+                    direction = randomNumber;
+
+                    if (direction > 3)
+                    {
+                        totalTPPads++;
+                        noTPPadsInCurrentWalk++;
+                    }
+                    else
+                    {
+                        walkLength++;
+                    }
+
                     if (direction == 0)
                     {
                         //Try and move up, otherwise move down
                         if (currentY != 0)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].up = true;
-                            currentWalk[currentX, currentY - 1].down = true;
+                            currentWalk[currentX, currentY, currentZ].up = true;
+                            currentWalk[currentX, currentY - 1, currentZ].down = true;
                             //Go UP
                             currentY--;
-                            
+                            direction = 0;
+
                         }
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].down = true;
-                            currentWalk[currentX, currentY+1].up = true;
+                            currentWalk[currentX, currentY, currentZ].down = true;
+                            currentWalk[currentX, currentY + 1, currentZ].up = true;
                             //Go down
                             currentY++;
                             direction = 1;//Change the direction (important for later)
@@ -281,63 +321,66 @@ namespace MazeT
                     else if (direction == 1)
                     {
                         //Try and move down, otherwise move up
-                        if (currentY != height-1)
+                        if (currentY != height - 1)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].down = true;
-                            currentWalk[currentX, currentY+1].up = true;
+                            currentWalk[currentX, currentY, currentZ].down = true;
+                            currentWalk[currentX, currentY + 1, currentZ].up = true;
                             //Go down
                             currentY++;
+                            direction = 1;
                         }
                         else
                         {
                             //Connect the tile
-                            currentWalk[currentX, currentY].up = true;
-                            currentWalk[currentX, currentY-1].down = true;
+                            currentWalk[currentX, currentY, currentZ].up = true;
+                            currentWalk[currentX, currentY - 1, currentZ].down = true;
                             //Go up
                             currentY--;
                             direction = 0;
                         }
                     }
 
-                    else if (direction == 3)
+                    else if (direction == 2)
                     {
                         //Try and move right, otherwise move left
-                        if (currentX != width-1)
+                        if (currentX != width - 1)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].right = true;
-                            currentWalk[currentX+1, currentY].left = true;
+                            currentWalk[currentX, currentY, currentZ].right = true;
+                            currentWalk[currentX + 1, currentY, currentZ].left = true;
                             //Go Right
                             currentX++;
+                            direction = 3;
                         }
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].left = true;
-                            currentWalk[currentX-1, currentY].right = true;
+                            currentWalk[currentX, currentY, currentZ].left = true;
+                            currentWalk[currentX - 1, currentY, currentZ].right = true;
                             //Go left
                             currentX--;
                             direction = 2;
                         }
                     }
 
-                    else if (direction == 2)
+                    else if (direction == 3)
                     {
                         //Try and move left, otherwise move right
                         if (currentX != 0)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].left = true;
-                            currentWalk[currentX-1, currentY].right = true;
+                            currentWalk[currentX, currentY, currentZ].left = true;
+                            currentWalk[currentX - 1, currentY, currentZ].right = true;
                             //Go left
                             currentX--;
+                            direction = 2;
                         }
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY].right = true;
-                            currentWalk[currentX+1, currentY].left = true;
+                            currentWalk[currentX, currentY, currentZ].right = true;
+                            currentWalk[currentX + 1, currentY, currentZ].left = true;
                             //Go right
                             currentX++;
                             direction = 3;
@@ -347,39 +390,88 @@ namespace MazeT
                     else if (direction == 4)
                     {
                         //Try going to the layer below
-
+                        if (currentZ != 0)
+                        {
+                            //Connect the tiles together
+                            currentWalk[currentX, currentY, currentZ].below = true;
+                            currentWalk[currentX, currentY, currentZ - 1].above = true;
+                            //Go to layer below
+                            currentZ--;
+                            direction = 4;
+                        }
+                        else
+                        {
+                            //Connect the tiles together
+                            currentWalk[currentX, currentY, currentZ].above = true;
+                            currentWalk[currentX, currentY, currentZ + 1].below = true;
+                            //Go to layer above
+                            currentZ++;
+                            direction = 5;
+                        }
 
                     }
 
-                    //Determine if the current tile has been visited or not
-                    if (isVisited[currentX, currentY])
+                    else
                     {
-                        // If it has been visited already, reset all the tiles visited 
-                        // during the random walk. 
-                        for (int i = 0; i < width; i++)
+                        //Try going to the layer above
+                        if (currentZ < maxLayers - 1)
                         {
-                            for (int j = 0; j < height; j++)
+                            //Connect the tiles together
+                            currentWalk[currentX, currentY, currentZ].above = true;
+                            currentWalk[currentX, currentY, currentZ + 1].below = true;
+                            //Go to layer above
+                            currentZ++;
+                            direction = 5;
+                        }
+                        else
+                        {
+                            //Connect the tiles together
+                            currentWalk[currentX, currentY, currentZ].below = true;
+                            currentWalk[currentX, currentY, currentZ - 1].above = true;
+                            //Go to layer below
+                            currentZ--;
+                            direction = 4;
+                        }
+
+                    }
+
+                    if (isVisited[currentX, currentY, currentZ])
+                    {
+                        //Reset the current walk since we have now looped back to our original position
+                        for (int x = 0; x < width; x++)
+                        {
+                            for (int y = 0; y < height; y++)
                             {
-                                currentWalk[i, j] = new Tile();
-                                isVisited[i, j] = false;
+                                for (int z = 0; z < maxLayers; z++)
+                                {
+                                    isVisited[x, y, z] = false;
+                                    currentWalk[x, y, z].tileConnections = new bool[] { false, false, false, false, false, false };
+                                    
+                                }
                             }
                         }
-                    }                    
+                        totalTPPads -= noTPPadsInCurrentWalk;
+                        noTPPadsInCurrentWalk = 0;
+                        walkLength = 0;
+                    }
 
-                } while (!isPartOfMaze[currentX, currentY]);
+                } while (!isPartOfMaze[currentX, currentY, currentZ]);
 
-                //Now add all of the tiles into the maze
+                //Add all the tiles to the current walk
                 for (int x = 0; x < width; x++)
                 {
                     for (int y = 0; y < height; y++)
                     {
-                        //Add it to the maze and reset the tile
-                        if (isVisited[x, y])
+                        for (int z = 0; z < maxLayers; z++)
                         {
-                            currentWalk[x, y].tileConnections.CopyTo(_tiles[x, y, 0].tileConnections, 0);                            
-                            currentWalk[x, y].tileConnections = new bool[]{ false, false, false, false};
-                            isVisited[x, y] = false;
-                            isPartOfMaze[x, y] = true;
+                            if (isVisited[x, y, z])
+                            {
+                                currentWalk[x, y, z].tileConnections.CopyTo(_tiles[x, y, z].tileConnections, 0);
+                                isPartOfMaze[x, y, z] = true;
+                                isVisited[x, y, z] = false;
+                                currentWalk[x, y, z].tileConnections= new bool[] { false, false, false, false, false, false };
+                            }
+
                         }
                     }
                 }
@@ -387,10 +479,13 @@ namespace MazeT
                 //Flip the direction since it will not connect correctly otherwise
                 //We can do this by flipping the last bit. 
                 direction = direction ^ 1;
-                _tiles[currentX, currentY, 0].tileConnections[direction] = true;
+                _tiles[currentX, currentY, currentZ].tileConnections[direction] = true;
+                hasUsedTPPad = false;
+                noTPPadsInCurrentWalk = 0;
+                walkLength = 0;
 
             } while (!isBoolArrayFilled(isPartOfMaze, true));
-                                    
+            
         }
 
         /// <summary>
@@ -403,7 +498,7 @@ namespace MazeT
             //Assumes one has begun the sprite batch
             for (int x = 0; x < _width; x++)
             {
-                for (int y  = 0; y < _height; y++)
+                for (int y = 0; y < _height; y++)
                 {
                     if (!_tiles[x, y, layer].up)
                     {
@@ -413,7 +508,7 @@ namespace MazeT
                     if (!_tiles[x, y, layer].down)
                     {
                         //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset-mazeWallWidth, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y, layer].left)
                     {
@@ -423,7 +518,7 @@ namespace MazeT
                     if (!_tiles[x, y, layer].right)
                     {
                         //Draw a rectangle to the right of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x+1) + xOffset-mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) + xOffset - mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
                     }
                 }
             }
@@ -432,7 +527,7 @@ namespace MazeT
         }
 
         //Display current layer
-        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour)
+        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour, Texture2D TPColour)
         {
             //Assumes one has begun the sprite batch
             for (int x = 0; x < _width; x++)
@@ -458,6 +553,11 @@ namespace MazeT
                     {
                         //Draw a rectangle to the right of the tile
                         spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) + xOffset - mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                    }
+                    if (_tiles[x, y, currentLayer].above || _tiles[x, y, currentLayer].below)
+                    {
+                        //Draw a coloured rectangle in the middle of the screen
+                        spriteBatch.Draw(TPColour, new Rectangle(tileSize * x + xOffset + mazeWallWidth, tileSize * y + yOffset + mazeWallWidth, tileSize-mazeWallWidth*2, tileSize - mazeWallWidth*2), Color.White);
                     }
                 }
             }
