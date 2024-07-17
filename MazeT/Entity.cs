@@ -143,17 +143,22 @@ namespace MazeT
 
     internal class Player : CollisionCharacter
     {
-        public AnimatedSpriteSheet walkUp;
-        public AnimatedSpriteSheet walkLeft;
-        public AnimatedSpriteSheet walkDown;
-        public AnimatedSpriteSheet walkRight;
+        public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
         private double internalTimer = 0;
-        private int idleFacingDirection = 0;
+        private FacingDirections direction = FacingDirections.NORTH;
         private enum PlayerState
         {
             IDLE,
             WALKING,
             ATTACK            
+        }
+
+        private enum FacingDirections
+        {
+            NORTH = 0,
+            EAST = 1,
+            SOUTH = 2,
+            WEST = 3
         }
 
         private PlayerState playerState = PlayerState.IDLE;
@@ -162,76 +167,77 @@ namespace MazeT
             collision_rect = new Rectangle(x, y, width, height);
             position = new Vector2(x, y);
             velocity = new Vector2(0, 0);
-            walkUp = new AnimatedSpriteSheet(width, height, 3, 1, 0);
-            walkLeft = new AnimatedSpriteSheet(width, height, 3, 1, 192);
-            walkDown = new AnimatedSpriteSheet(width, height, 3, 1, 128);
-            walkRight = new AnimatedSpriteSheet(width, height, 3, 1, 64);
+            for (int i = 0; i < 4; i++)
+            {
+                walk[i] = new AnimatedSpriteSheet(128, 128, 4, 0, 128 * i);
+            }
         }
 
         public void Update(KeyboardState currentKeys, KeyboardState previousKeys, double timeElapsed)
         {
+            int walkAnimationDelay = 100;
             if (currentKeys.IsKeyDown(Keys.Up))
             {
-                idleFacingDirection = 0;
+                direction = FacingDirections.NORTH;
                 velocity.X = 0;
                 velocity.Y = -2;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
-                    internalTimer = 100;
+                    internalTimer = walkAnimationDelay;
                 }                
                 if (internalTimer <= 0)
                 {
-                    walkUp.UpdateAnimationFrame();
-                    internalTimer = 100;
+                    walk[(int) direction].UpdateAnimationFrame();
+                    internalTimer = walkAnimationDelay;
                 }
             }
             else if (currentKeys.IsKeyDown(Keys.Down))
             {
-                idleFacingDirection = 1;
+                direction = FacingDirections.SOUTH;
                 velocity.X = 0;
                 velocity.Y = 2;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
-                    internalTimer = 100;
+                    internalTimer = walkAnimationDelay;
                 }
                 if (internalTimer <= 0)
                 {
-                    walkDown.UpdateAnimationFrame();
-                    internalTimer = 100;
+                    walk[(int)direction].UpdateAnimationFrame();
+                    internalTimer = walkAnimationDelay;
                 }
             }
             else if (currentKeys.IsKeyDown(Keys.Right))
             {
-                idleFacingDirection = 2;
+                direction = FacingDirections.EAST;
                 velocity.Y = 0;
                 velocity.X = 2;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
-                    internalTimer = 100;
+                    internalTimer = walkAnimationDelay;
                 }
                 if (internalTimer <= 0)
                 {
-                    walkRight.UpdateAnimationFrame();
-                    internalTimer = 100;
+                    walk[(int)direction].UpdateAnimationFrame();
+                    internalTimer = walkAnimationDelay;
                 }
             }
             else if (currentKeys.IsKeyDown(Keys.Left))
             {
-                idleFacingDirection = 3;
+                direction = FacingDirections.WEST;
                 velocity.Y = 0;
                 velocity.X = -2;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
-                    internalTimer = 100;
+                    internalTimer = walkAnimationDelay;
                 }
                 if (internalTimer <= 0)
                 {
-                    walkLeft.UpdateAnimationFrame();
-                    internalTimer = 100;
+                    walk[(int)direction].UpdateAnimationFrame();
+                    internalTimer = walkAnimationDelay;
                 }
             }
             else
@@ -239,7 +245,7 @@ namespace MazeT
                 velocity.X = 0;
                 velocity.Y = 0;
                 playerState = PlayerState.IDLE;
-                walkUp.ResetAnimation();
+                walk[(int) direction].ResetAnimation();
             }
 
             position += velocity;
@@ -253,44 +259,11 @@ namespace MazeT
         {
             if (playerState == PlayerState.WALKING)
             {
-                if (velocity.Y < 0)
-                {
-                    walkUp.Display(spriteBatch, position);
-                }
-                else if (velocity.Y > 0)
-                {
-                    walkDown.Display(spriteBatch, position);
-                }   
-                else if (velocity.X > 0)
-                {
-                    walkRight.Display(spriteBatch, position);
-                }
-                else
-                {
-                    walkLeft.Display(spriteBatch, position);
-                }
+                walk[(int)direction].Display(spriteBatch, position);
             }            
             else if (playerState == PlayerState.IDLE)
             {
-                if (idleFacingDirection == 0)
-                {
-                    walkUp.Display(spriteBatch, position, 1);
-                }
-
-                else if (idleFacingDirection == 1)
-                {
-                    walkDown.Display(spriteBatch, position, 1);
-                }
-
-                else if (idleFacingDirection == 2)
-                {
-                    walkRight.Display(spriteBatch, position, 1);
-                }
-
-                else 
-                {
-                    walkLeft.Display(spriteBatch, position, 1);
-                }
+                walk[(int)direction].Display(spriteBatch, position, 1);
             }
         }
     }
