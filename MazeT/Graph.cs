@@ -117,7 +117,7 @@ namespace MazeT
         /// <summary>
         /// Size in pixels
         /// </summary>
-        public readonly int tileSize = 60;
+        public readonly int tileSize = 120;
 
         /// <summary>
         /// Size in pixels
@@ -125,14 +125,10 @@ namespace MazeT
         public readonly int mazeWallWidth = 10;
 
         /// <summary>
-        /// Where the topleft corner of the maze is positioned
+        /// Global poisition of top left corner of maze
         /// </summary>
-        public readonly int xOffset = 30;
-
-        /// <summary>
-        /// Where the topleft corner of the maze is positioned
-        /// </summary>
-        public readonly int yOffset = 30;
+        public Vector2 pos = new Vector2(0, 0);
+        public int xmax, ymax;
 
         /// <summary>
         /// Generate the maze using a chosen algorithm
@@ -145,7 +141,9 @@ namespace MazeT
             maxLayers = layers;
             _tiles = new Tile[width, height, layers]; //2 layer maze
             WilsonAlgorithm();
-            // BlankCreation(width, height);
+            xmax = tileSize * width - (int)pos.X;
+            ymax = tileSize * height - (int)pos.Y;
+
         }
 
         //Generate a tester maze
@@ -503,22 +501,22 @@ namespace MazeT
                     if (!_tiles[x, y, layer].up)
                     {
                         //Draw a rectangle above the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + (int) pos.X, tileSize * y + (int) pos.Y, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y, layer].down)
                     {
                         //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + (int) pos.X, tileSize * (y + 1) - (int)pos.Y - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y, layer].left)
                     {
                         //Draw a rectangle to the left of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
                     }
                     if (!_tiles[x, y, layer].right)
                     {
                         //Draw a rectangle to the right of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) + xOffset - mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) - (int)pos.X - mazeWallWidth, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
                     }
                 }
             }
@@ -537,27 +535,27 @@ namespace MazeT
                     if (!_tiles[x, y, currentLayer].up)
                     {
                         //Draw a rectangle above the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y, currentLayer].down)
                     {
                         //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * (y + 1) + yOffset - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * (y + 1) - (int)pos.Y - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
                     }
                     if (!_tiles[x, y, currentLayer].left)
                     {
                         //Draw a rectangle to the left of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + xOffset, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
                     }
                     if (!_tiles[x, y, currentLayer].right)
                     {
                         //Draw a rectangle to the right of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) + xOffset - mazeWallWidth, tileSize * y + yOffset, mazeWallWidth, tileSize), Color.White);
+                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) - (int)pos.X - mazeWallWidth, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
                     }
                     if (_tiles[x, y, currentLayer].above || _tiles[x, y, currentLayer].below)
                     {
                         //Draw a coloured rectangle in the middle of the screen
-                        spriteBatch.Draw(TPColour, new Rectangle(tileSize * x + xOffset + mazeWallWidth, tileSize * y + yOffset + mazeWallWidth, tileSize-mazeWallWidth*2, tileSize - mazeWallWidth*2), Color.White);
+                        spriteBatch.Draw(TPColour, new Rectangle(tileSize * x - (int)pos.X + mazeWallWidth, tileSize * y - (int)pos.Y + mazeWallWidth, tileSize-mazeWallWidth*2, tileSize - mazeWallWidth*2), Color.White);
                     }
                 }
             }

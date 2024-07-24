@@ -118,6 +118,21 @@ namespace MazeT
                 spriteBatch.Draw(sprite_sheet, position, _drawingBounds[animationIndex], Color.White);
             }
         }
+
+        public void Display(SpriteBatch spriteBatch, Point position, int animationIndex = -1)
+        {
+            //Convert position to vector2 form
+            Vector2 pos = new Vector2(position.X, position.Y);
+            if (animationIndex == -1)
+            {
+                spriteBatch.Draw(sprite_sheet, pos, _drawingBounds[_animationIndex], Color.White);
+            }
+            else
+            {
+                //This is for fixed sprites
+                spriteBatch.Draw(sprite_sheet, pos, _drawingBounds[animationIndex], Color.White);
+            }
+        }
     }
 
     /// <summary>
@@ -142,7 +157,7 @@ namespace MazeT
     }
 
     internal class Player : CollisionCharacter
-    {
+    {        
         public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
         private double internalTimer = 0;
         private FacingDirections direction = FacingDirections.NORTH;
@@ -175,12 +190,18 @@ namespace MazeT
 
         public void Update(KeyboardState currentKeys, KeyboardState previousKeys, double timeElapsed)
         {
-            int walkAnimationDelay = 100;
+            int walkAnimationDelay = 200;
+            int playerSpeed = 2;
+            if (currentKeys.IsKeyDown(Keys.LeftShift) || currentKeys.IsKeyDown(Keys.RightShift))
+            {
+                playerSpeed = 4;
+                walkAnimationDelay = 120;
+            }
             if (currentKeys.IsKeyDown(Keys.Up))
             {
                 direction = FacingDirections.NORTH;
                 velocity.X = 0;
-                velocity.Y = -2;
+                velocity.Y = -playerSpeed;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
@@ -196,7 +217,7 @@ namespace MazeT
             {
                 direction = FacingDirections.SOUTH;
                 velocity.X = 0;
-                velocity.Y = 2;
+                velocity.Y = playerSpeed;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
@@ -212,7 +233,7 @@ namespace MazeT
             {
                 direction = FacingDirections.EAST;
                 velocity.Y = 0;
-                velocity.X = 2;
+                velocity.X = playerSpeed;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
@@ -228,7 +249,7 @@ namespace MazeT
             {
                 direction = FacingDirections.WEST;
                 velocity.Y = 0;
-                velocity.X = -2;
+                velocity.X = -playerSpeed;
                 if (playerState != PlayerState.WALKING)
                 {
                     playerState = PlayerState.WALKING;
@@ -249,8 +270,6 @@ namespace MazeT
             }
 
             position += velocity;
-            collision_rect.X = (int) velocity.X;
-            collision_rect.Y = (int) velocity.Y;
 
             internalTimer -= timeElapsed;
         }
@@ -259,11 +278,11 @@ namespace MazeT
         {
             if (playerState == PlayerState.WALKING)
             {
-                walk[(int)direction].Display(spriteBatch, position);
+                walk[(int)direction].Display(spriteBatch, collision_rect.Center);
             }            
             else if (playerState == PlayerState.IDLE)
             {
-                walk[(int)direction].Display(spriteBatch, position, 1);
+                walk[(int)direction].Display(spriteBatch, collision_rect.Center, 1);
             }
         }
     }
