@@ -11,19 +11,6 @@ using System.Security.Cryptography;
 
 namespace MazeT
 {
-    enum TileTypes
-    {
-        TP_PAD = 0,
-        BLANK = 1
-    };
-
-    enum MazeAlgorithms
-    {
-        BLANK = 0,
-        WILSON = 1,
-        PRIM = 2,
-        RandomisedDFS = 3
-    }
 
     /// <summary>
     /// This class is used to store the data of the tile, including which other tiles it connects to
@@ -31,10 +18,6 @@ namespace MazeT
     /// </summary>
     internal class Tile
     {
-        //Is the tile special or not
-        private TileTypes _tileType;
-        public TileTypes tileType { get { return _tileType; } }
-
         //An adjacency list of sorts
         /// <summary>
         /// Checks if the tile is connected to tile up, down, left, or right
@@ -80,19 +63,16 @@ namespace MazeT
 
         public Tile()
         {
-            _tileType = TileTypes.BLANK;
             tileConnections = new bool[] { false, false, false, false, false, false };
         }
 
-        public Tile(bool[] tileConnections, TileTypes tileType = TileTypes.BLANK)
+        public Tile(bool[] tileConnections)
         {
-            _tileType = tileType;
             this.tileConnections = tileConnections;
         }
 
-        public Tile(bool up, bool down, bool left, bool right, bool below, bool above, TileTypes tileType = TileTypes.BLANK)
+        public Tile(bool up, bool down, bool left, bool right, bool below, bool above)
         {
-            _tileType = tileType;
             tileConnections = new bool[] { up, down, left, right, below, above };
         }
     }
@@ -133,7 +113,7 @@ namespace MazeT
         /// <summary>
         /// Generate the maze using a chosen algorithm
         /// </summary>
-        public Maze(int width, int height, int layers = 2, MazeAlgorithms algorithm = MazeAlgorithms.BLANK)
+        public Maze(int width, int height, int layers = 2)
         {
             _width = width;
             _height = height;
