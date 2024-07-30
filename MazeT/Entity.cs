@@ -197,7 +197,7 @@ namespace MazeT
                 playerSpeed = 4;
                 walkAnimationDelay = 120;
             }
-            if (currentKeys.IsKeyDown(Keys.Up))
+            if (currentKeys.IsKeyDown(Keys.Up) || currentKeys.IsKeyDown(Keys.W))
             {
                 direction = FacingDirections.NORTH;
                 velocity.X = 0;
@@ -213,7 +213,7 @@ namespace MazeT
                     internalTimer = walkAnimationDelay;
                 }
             }
-            else if (currentKeys.IsKeyDown(Keys.Down))
+            else if (currentKeys.IsKeyDown(Keys.Down) || currentKeys.IsKeyDown(Keys.S))
             {
                 direction = FacingDirections.SOUTH;
                 velocity.X = 0;
@@ -229,7 +229,7 @@ namespace MazeT
                     internalTimer = walkAnimationDelay;
                 }
             }
-            else if (currentKeys.IsKeyDown(Keys.Right))
+            else if (currentKeys.IsKeyDown(Keys.Right) || currentKeys.IsKeyDown(Keys.D))
             {
                 direction = FacingDirections.EAST;
                 velocity.Y = 0;
@@ -245,7 +245,7 @@ namespace MazeT
                     internalTimer = walkAnimationDelay;
                 }
             }
-            else if (currentKeys.IsKeyDown(Keys.Left))
+            else if (currentKeys.IsKeyDown(Keys.Left) || currentKeys.IsKeyDown(Keys.A))
             {
                 direction = FacingDirections.WEST;
                 velocity.Y = 0;

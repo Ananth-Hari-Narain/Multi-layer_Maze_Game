@@ -94,15 +94,22 @@ namespace MazeT
         private int _maxLayers;
         public int maxLayers { get; set; }
 
-        /// <summary>
-        /// Size in pixels
-        /// </summary>
-        public readonly int tileSize = 120;
+        public Texture2D mazeWallH;
+        public Texture2D mazeWallV;
+        public Texture2D mazeFloor;
+        private Rectangle[] wallRects; //to help divide up the sprite sheet
+        private Rectangle[] floorRects; //to help divide up the sprite sheet
+        public Rectangle[] collisionRects;
 
         /// <summary>
         /// Size in pixels
         /// </summary>
-        public readonly int mazeWallWidth = 10;
+        public readonly int tileSize = 128;
+
+        /// <summary>
+        /// Size in pixels
+        /// </summary>
+        public readonly int mazeWallWidth = 16;
 
         /// <summary>
         /// Global poisition of top left corner of maze
@@ -466,12 +473,8 @@ namespace MazeT
             
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="spriteBatch">The spritebatch being used</param>
-        /// <param name="rectColour">The one pixel used to display a rectangle</param>
-        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour, int layer)
+        //These simple display functions are kinda obsolete but I'll get rid of them later
+        public void displayMazeSimple(SpriteBatch spriteBatch, Texture2D rectColour, int layer)
         {
             //Assumes one has begun the sprite batch
             for (int x = 0; x < _width; x++)
@@ -505,7 +508,7 @@ namespace MazeT
         }
 
         //Display current layer
-        public void displayMaze(SpriteBatch spriteBatch, Texture2D rectColour, Texture2D TPColour)
+        public void displayMazeSimple(SpriteBatch spriteBatch, Texture2D rectColour, Texture2D TPColour)
         {
             //Assumes one has begun the sprite batch
             for (int x = 0; x < _width; x++)
@@ -541,6 +544,59 @@ namespace MazeT
             }
 
             //End the spritebatch afterwards.
+        }
+
+        public void displayMaze(SpriteBatch spriteBatch)
+        {
+            const int offsetY = 128;
+            const int offsetX = 128;
+            const int tileW = 64;
+            const int wallVWidth = 32;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+
+                    //If we are at the top
+                    if (y == 0)
+                    {
+                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX - pos.X, -pos.Y), Color.White);
+                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX + tileW - pos.X, -pos.Y), Color.White);
+                    }
+
+                    if (_tiles[x, y, currentLayer].down == false)
+                    {
+                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX + tileW - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
+                    }
+                }
+            }
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    //Display right walls (if applicable)  
+                    if (!_tiles[x, y, currentLayer].right)
+                    {
+                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    }                   
+
+                    //If we are on the leftmost side of the maze
+                    if (x == 0)
+                    {
+                        spriteBatch.Draw(mazeWallV, new Vector2(-pos.X, y * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(mazeWallV, new Vector2(-pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    }
+                }
+            }
         }
     }
 }

@@ -35,8 +35,7 @@ namespace MazeT
         {
             // TODO: Add your initialization logic here
 
-            base.Initialize();
-            maze = new Maze(12, 12, 2);
+            base.Initialize();            
             previousState = Keyboard.GetState();
             
         }
@@ -46,13 +45,18 @@ namespace MazeT
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
+            maze = new Maze(20, 20, 2);
+            maze.mazeWallH = Content.Load<Texture2D>("temp_wallH");
+            maze.mazeWallV = Content.Load<Texture2D>("temp_wallV");
+            maze.mazeFloor = Content.Load<Texture2D>("temp_floor");
+
             wall = new Texture2D(GraphicsDevice, 1, 1);
-            wall.SetData(new Color[] { Color.White });
+            wall.SetData(new Color[] { Color.Black });
 
             TPpad = new Texture2D(GraphicsDevice, 1, 1);
             TPpad.SetData(new Color[] { Color.Purple });
 
-            player = new Player(48, 48, 400, 400);
+            player = new Player(128, 128, 20, 20);
             player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run");
 
             for (int i = 1; i < 4; i++)
@@ -73,7 +77,7 @@ namespace MazeT
                 
             }            
             player.Update(currentKeys, previousState, gameTime.ElapsedGameTime.TotalMilliseconds);
-            if (player.collision_rect.X < screen_width/2 + 30 && player.collision_rect.X > screen_width / 2 - 30)
+            if (player.collision_rect.X < screen_width / 2 + 30 && player.collision_rect.X > screen_width / 2 - 30)
             {
                 maze.pos.X += player.velocity.X;
             }
@@ -81,7 +85,7 @@ namespace MazeT
             {
                 maze.pos.Y += player.velocity.Y;
             }
-            
+
             if (maze.pos.X < 0)
             {
                 maze.pos.X = 0;
@@ -113,7 +117,8 @@ namespace MazeT
             GraphicsDevice.Clear(Color.LightGray);
             // TODO: Add your drawing code here
             _spriteBatch.Begin();
-            maze.displayMaze(_spriteBatch, wall, TPpad);
+            maze.displayMaze(_spriteBatch);
+            
             player.Display(_spriteBatch);
             _spriteBatch.End();
 
