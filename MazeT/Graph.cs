@@ -87,11 +87,7 @@ namespace MazeT
 
         private int _height;
         public int height { get { return _height; } }
-
-        private int _currentLayer;
         public int currentLayer { get; set; }
-
-        private int _maxLayers;
         public int maxLayers { get; set; }
 
         public Texture2D mazeWallH;
@@ -99,7 +95,7 @@ namespace MazeT
         public Texture2D mazeFloor;
         private Rectangle[] wallRects; //to help divide up the sprite sheet
         private Rectangle[] floorRects; //to help divide up the sprite sheet
-        public Rectangle[] collisionRects;
+        public List<Rectangle>[] collisionRects;
 
         /// <summary>
         /// Size in pixels
@@ -127,53 +123,19 @@ namespace MazeT
             currentLayer = 0;
             maxLayers = layers;
             _tiles = new Tile[width, height, layers]; //2 layer maze
+            collisionRects = new List<Rectangle>[maxLayers];
             WilsonAlgorithm();
             xmax = tileSize * width - (int)pos.X;
             ymax = tileSize * height - (int)pos.Y;
 
-        }
-
-        //Generate a tester maze
-        private void BlankCreation(int width, int height)
-        {
-            //Initialise all of the new tiles
-            for (int x = 0; x < _width; x++)
+            //Initialise the collision rect array
+            for (int z = 0; z < maxLayers; z++)
             {
-                for (int y = 0; y < _height; y++)
-                {
-                    _tiles[x, y, 1] = new Tile(new bool[] { true, true, true, true });
-                    if (x == 0)
-                    {
-                        _tiles[x, y, 1].left = false;
-                    }
-                    else if (x == 9)
-                    {
-                        _tiles[x, y, 1].right = false;
-                    }
-
-                    if (y == 0)
-                    {
-                        _tiles[x, y, 1].up = false;
-                    }
-                    else if (y == 9)
-                    {
-                        _tiles[x, y, 1].down = false;
-                    }
-
-                    if (x == 3 && y == 4)
-                    {
-                        _tiles[x, y, 1].right = false;
-                        _tiles[x, y, 1].left = false;
-                        _tiles[x, y, 1].down = false;
-                    }
-                    else if (x == 7 && y == 4)
-                    {
-                        _tiles[x, y, 1].up = false;
-                        _tiles[x, y, 1].down = false;
-                    }
-                }
+                collisionRects[z] = new List<Rectangle>();
             }
-        }
+            setCollisionRectangles();
+
+        }        
 
         public static bool isBoolArrayFilled(bool[,,] array, bool value)
         {
@@ -596,6 +558,80 @@ namespace MazeT
                         spriteBatch.Draw(mazeWallV, new Vector2(-pos.X, y * offsetY + tileW - pos.Y), Color.White);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// This function is used to create the list of collision rectangles
+        /// </summary>
+        public void setCollisionRectangles()
+        {
+            //These constants help to form the dimensions of the maze
+            const int offsetY = 128;
+            const int offsetX = 128;
+            const int tileW = 64;
+            const int wallVWidth = 32;
+
+            //Generate the top and left hand-side rectangles
+            for (int z = 0; z < maxLayers; z++)
+            {
+                collisionRects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, tileW));
+                collisionRects[z].Add(new Rectangle(0, 0, wallVWidth, (height - 1) * offsetY + tileW * 2));
+            }            
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    for (int z = 0; z < maxLayers; z++)
+                    {
+                        //Add bottom rectangles (this code should mirror display code)
+                        if (_tiles[x, y, z].down == false)
+                        {
+                            collisionRects[z].Add(new Rectangle(
+                                (int)(x * offsetX),
+                                (int)((y + 1) * offsetY), 
+                                tileW * 2, 
+                                tileW
+                                ));
+                        }     
+                        
+                        //Add right rectangles
+                        if (_tiles[x, y, z].right == false)
+                        {
+                            collisionRects[z].Add(new Rectangle(
+                                (int)((x + 1) * offsetX - wallVWidth),
+                                (int)(y * offsetY), 
+                                wallVWidth, 
+                                tileW * 3 
+                                ));
+                        }
+                    }                    
+                }
+            }
+        } 
+
+        public void UpdateCollisionRects(Vector2 deltaPos)
+        {
+            
+            for (int z = 0; z < maxLayers; z++)
+            {
+                for (int i = 0; i < collisionRects[z].Count; i++)
+                {
+                    Rectangle rect = collisionRects[z][i];
+                    rect.Offset(deltaPos);
+                    collisionRects[z][i] = rect;
+                }
+            }
+        }
+        /// <summary>
+        /// This is a tester function that will display the rectangles.
+        /// </summary>
+        public void displayRects(SpriteBatch spriteBatch, Texture2D rectColour)
+        {
+            foreach (Rectangle rect in collisionRects[currentLayer])
+            {
+                spriteBatch.Draw(rectColour, rect, Color.White);
             }
         }
     }
