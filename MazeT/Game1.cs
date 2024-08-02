@@ -13,11 +13,14 @@ namespace MazeT
         private SpriteBatch _spriteBatch;
         private const int screen_width = 800;
         private const int screen_height = 800;
+        private bool mazeTest = true; //testing code
+        private Vector2 prevMazePos = new Vector2();
 
         private Texture2D wall;
         private Texture2D TPpad;
         private Maze maze;
         private Player player;
+        private SpriteFont testFont;
 
         private KeyboardState previousState;
         public Game1()
@@ -56,8 +59,10 @@ namespace MazeT
             TPpad = new Texture2D(GraphicsDevice, 1, 1);
             TPpad.SetData(new Color[] { Color.Purple });
 
-            player = new Player(128, 128, 20, 20);
+            player = new Player(48, 8, 20, 20);
             player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run");
+
+            testFont = Content.Load<SpriteFont>("testFont");
 
             for (int i = 1; i < 4; i++)
             {
@@ -70,18 +75,20 @@ namespace MazeT
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
             KeyboardState currentKeys = Keyboard.GetState();
             if (currentKeys.IsKeyDown(Keys.Space) && !previousState.IsKeyDown(Keys.Space))
             {
-                
-            }            
-            player.Update(currentKeys, previousState, gameTime.ElapsedGameTime.TotalMilliseconds);
-            if (player.collision_rect.X < screen_width / 2 + 30 && player.collision_rect.X > screen_width / 2 - 30)
+                mazeTest = !mazeTest;
+            }
+            
+            player.Update(currentKeys, previousState, maze.pos,gameTime.ElapsedGameTime.TotalMilliseconds);
+            
+            //Side scrolling code//
+            if (player.localPosition.X <= screen_width / 2 + 30 && player.localPosition.X >= screen_width / 2 - 30)
             {
                 maze.pos.X += player.velocity.X;
             }
-            if (player.collision_rect.Y < screen_height / 2 + 10 && player.collision_rect.Y > screen_height / 2 - 50)
+            if (player.localPosition.Y <= screen_height / 2 + 30 && player.localPosition.Y >= screen_height / 2 - 30)
             {
                 maze.pos.Y += player.velocity.Y;
             }
@@ -99,16 +106,23 @@ namespace MazeT
             {
                 maze.pos.Y = 0;
             }
-            else if (maze.pos.Y > maze.ymax - screen_height)
+            else if (maze.pos.Y - 64 > maze.ymax - screen_height)
             {
-                maze.pos.Y = maze.ymax - screen_height;
+                maze.pos.Y = maze.ymax - screen_height + 64;
             }
 
-            player.collision_rect.X = (int) (player.position.X - maze.pos.X);
-            player.collision_rect.Y = (int)(player.position.Y - maze.pos.Y);
+            player.localPosition.X = (int) (player.globalPosition.X - maze.pos.X + 32);
+            player.localPosition.Y = (int)(player.globalPosition.Y - maze.pos.Y + 32);
+            maze.UpdateCollisionRects(prevMazePos - maze.pos);
+
+            //Collision handling//
+            //Handle enemy collision
+
+            //Handle wall collision
+            //player.HandleWallCollision(maze.collisionRects[maze.currentLayer]);
 
             previousState = Keyboard.GetState();
-            
+            prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
             base.Update(gameTime);
         }
 
@@ -117,9 +131,17 @@ namespace MazeT
             GraphicsDevice.Clear(Color.LightGray);
             // TODO: Add your drawing code here
             _spriteBatch.Begin();
-            maze.displayMaze(_spriteBatch);
-            
+            if (mazeTest)
+            {
+                maze.displayMaze(_spriteBatch);
+            }
+            else{
+                maze.displayRects(_spriteBatch, wall);
+            }
+            _spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
+            _spriteBatch.DrawString(testFont, $"coll_rect_pos {player.collision_rect.Location}\n mazePos= {maze.pos}", new Vector2(0, 700), Color.White);
             player.Display(_spriteBatch);
+            
             _spriteBatch.End();
 
             base.Draw(gameTime);

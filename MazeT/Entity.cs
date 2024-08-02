@@ -143,14 +143,15 @@ namespace MazeT
     {
         public Rectangle collision_rect;
         //This is used as the floating point position of the enemies for smoother movement
-        public Vector2 position; 
+        public Vector2 globalPosition;
+        public Vector2 localPosition; //Used for displaying
         public Vector2 velocity;
 
         /// <summary>
         /// This is the function that will handle collision with walls for all objects 
         /// in the maze game.
         /// </summary>
-        public void HandleWallCollision(Rectangle[] wall_rects)
+        public void HandleWallCollision(List<Rectangle> wall_rects)
         {
             
         }
@@ -161,6 +162,7 @@ namespace MazeT
         public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
         private double internalTimer = 0;
         private FacingDirections direction = FacingDirections.NORTH;
+        private readonly Vector2 coll_rect_offset = new Vector2(73, 152);
         private enum PlayerState
         {
             IDLE,
@@ -179,8 +181,8 @@ namespace MazeT
         private PlayerState playerState = PlayerState.IDLE;
         public Player(int width, int height, int x, int y)
         {
-            collision_rect = new Rectangle(x, y, width, height);
-            position = new Vector2(x, y);
+            collision_rect = new Rectangle(x+72, y+110, width, height);
+            globalPosition = new Vector2(x, y);
             velocity = new Vector2(0, 0);
             for (int i = 0; i < 4; i++)
             {
@@ -188,7 +190,23 @@ namespace MazeT
             }
         }
 
-        public void Update(KeyboardState currentKeys, KeyboardState previousKeys, double timeElapsed)
+        public void UpdatePlayerPosition(Vector2 displacement)
+        {
+            globalPosition += displacement;
+        }
+
+        public void UpdatePlayerPosition(float x, float y)
+        {
+            globalPosition.X += x;
+            globalPosition.Y += y;
+        }
+
+        public void RefreshRectanglePosition(Vector2 mazePos)
+        {            
+            collision_rect.Location = (globalPosition - mazePos + coll_rect_offset - velocity).ToPoint();
+        }
+
+        public void Update(KeyboardState currentKeys, KeyboardState previousKeys, Vector2 mazePos, double timeElapsed)
         {
             int walkAnimationDelay = 200;
             int playerSpeed = 2;
@@ -269,7 +287,8 @@ namespace MazeT
                 walk[(int) direction].ResetAnimation();
             }
 
-            position += velocity;
+            UpdatePlayerPosition(velocity);
+            RefreshRectanglePosition(mazePos);
 
             internalTimer -= timeElapsed;
         }
@@ -278,11 +297,11 @@ namespace MazeT
         {
             if (playerState == PlayerState.WALKING)
             {
-                walk[(int)direction].Display(spriteBatch, collision_rect.Center);
+                walk[(int)direction].Display(spriteBatch, localPosition);
             }            
             else if (playerState == PlayerState.IDLE)
             {
-                walk[(int)direction].Display(spriteBatch, collision_rect.Center, 1);
+                walk[(int)direction].Display(spriteBatch, localPosition, 1);
             }
         }
     }
