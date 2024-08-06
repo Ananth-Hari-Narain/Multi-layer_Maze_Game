@@ -3,12 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MazeT
 {
@@ -142,6 +136,8 @@ namespace MazeT
     internal class CollisionCharacter
     {
         public Rectangle collision_rect;
+        public Point old_collision_pos;
+        public Vector2 old_global_position;
         //This is used as the floating point position of the enemies for smoother movement
         public Vector2 globalPosition;
         public Vector2 localPosition; //Used for displaying
@@ -151,9 +147,24 @@ namespace MazeT
         /// This is the function that will handle collision with walls for all objects 
         /// in the maze game.
         /// </summary>
-        public void HandleWallCollision(List<Rectangle> wall_rects)
+        public void HandleWallCollision(List<Rectangle> wall_rects, bool checkX)
         {
-            
+            foreach (Rectangle rect in wall_rects)
+            {                
+                if (collision_rect.Intersects(rect))
+                {
+                    if (checkX)
+                    {
+                        globalPosition.X -= velocity.X;
+                        collision_rect.X -= (int)velocity.X;
+                    }
+                    else
+                    {
+                        globalPosition.Y -= velocity.Y;
+                        collision_rect.Y -= (int)velocity.Y;
+                    }
+                }
+            }
         }
     }
 
@@ -181,7 +192,7 @@ namespace MazeT
         private PlayerState playerState = PlayerState.IDLE;
         public Player(int width, int height, int x, int y)
         {
-            collision_rect = new Rectangle(x+72, y+110, width, height);
+            collision_rect = new Rectangle(x+73, y+152, width, height);
             globalPosition = new Vector2(x, y);
             velocity = new Vector2(0, 0);
             for (int i = 0; i < 4; i++)
@@ -203,13 +214,14 @@ namespace MazeT
 
         public void RefreshRectanglePosition(Vector2 mazePos)
         {            
-            collision_rect.Location = (globalPosition - mazePos + coll_rect_offset - velocity).ToPoint();
+            collision_rect.Location = (globalPosition - mazePos + coll_rect_offset).ToPoint();
         }
 
-        public void Update(KeyboardState currentKeys, KeyboardState previousKeys, Vector2 mazePos, double timeElapsed)
+        public void Update(KeyboardState currentKeys, KeyboardState previousKeys, Vector2 mazePos, List<Rectangle> wall_rects, double timeElapsed)
         {
             int walkAnimationDelay = 200;
             int playerSpeed = 2;
+            bool directionKeyPressed = false;
             if (currentKeys.IsKeyDown(Keys.LeftShift) || currentKeys.IsKeyDown(Keys.RightShift))
             {
                 playerSpeed = 4;
@@ -217,6 +229,7 @@ namespace MazeT
             }
             if (currentKeys.IsKeyDown(Keys.Up) || currentKeys.IsKeyDown(Keys.W))
             {
+                directionKeyPressed = true;
                 direction = FacingDirections.NORTH;
                 velocity.X = 0;
                 velocity.Y = -playerSpeed;
@@ -233,6 +246,7 @@ namespace MazeT
             }
             else if (currentKeys.IsKeyDown(Keys.Down) || currentKeys.IsKeyDown(Keys.S))
             {
+                directionKeyPressed = true;
                 direction = FacingDirections.SOUTH;
                 velocity.X = 0;
                 velocity.Y = playerSpeed;
@@ -247,8 +261,18 @@ namespace MazeT
                     internalTimer = walkAnimationDelay;
                 }
             }
+
+            collision_rect.Offset(0, velocity.Y);
+            globalPosition.Y += velocity.Y;
+            HandleWallCollision(wall_rects, false);
+
+            if (currentKeys.IsKeyDown(Keys.Up) || currentKeys.IsKeyDown(Keys.W) || currentKeys.IsKeyDown(Keys.Down) || currentKeys.IsKeyDown(Keys.S))
+            {
+                //pass
+            }
             else if (currentKeys.IsKeyDown(Keys.Right) || currentKeys.IsKeyDown(Keys.D))
             {
+                directionKeyPressed = true;
                 direction = FacingDirections.EAST;
                 velocity.Y = 0;
                 velocity.X = playerSpeed;
@@ -265,6 +289,7 @@ namespace MazeT
             }
             else if (currentKeys.IsKeyDown(Keys.Left) || currentKeys.IsKeyDown(Keys.A))
             {
+                directionKeyPressed = true;
                 direction = FacingDirections.WEST;
                 velocity.Y = 0;
                 velocity.X = -playerSpeed;
@@ -279,17 +304,20 @@ namespace MazeT
                     internalTimer = walkAnimationDelay;
                 }
             }
-            else
+
+            collision_rect.Offset(velocity.X, 0);
+            globalPosition.X += velocity.X;
+            HandleWallCollision(wall_rects, true);
+
+            if (!directionKeyPressed)
             {
                 velocity.X = 0;
                 velocity.Y = 0;
                 playerState = PlayerState.IDLE;
                 walk[(int) direction].ResetAnimation();
             }
-
-            UpdatePlayerPosition(velocity);
+           
             RefreshRectanglePosition(mazePos);
-
             internalTimer -= timeElapsed;
         }
 

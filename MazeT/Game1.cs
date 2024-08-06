@@ -14,6 +14,7 @@ namespace MazeT
         private const int screen_width = 800;
         private const int screen_height = 800;
         private bool mazeTest = true; //testing code
+        private string test = "";
         private Vector2 prevMazePos = new Vector2();
 
         private Texture2D wall;
@@ -29,6 +30,8 @@ namespace MazeT
             _graphics.PreferredBackBufferWidth = screen_width; // Set your desired maze.width
             _graphics.PreferredBackBufferHeight = screen_height; // Set your desired maze.height
             _graphics.ApplyChanges();
+            this.IsFixedTimeStep = true;
+            
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             
@@ -59,7 +62,7 @@ namespace MazeT
             TPpad = new Texture2D(GraphicsDevice, 1, 1);
             TPpad.SetData(new Color[] { Color.Purple });
 
-            player = new Player(48, 8, 20, 20);
+            player = new Player(48, 8, -27, -86);
             player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run");
 
             testFont = Content.Load<SpriteFont>("testFont");
@@ -80,17 +83,25 @@ namespace MazeT
             {
                 mazeTest = !mazeTest;
             }
+            if (currentKeys.IsKeyDown(Keys.M))
+            {
+                this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 2d);
+            }
+            else if (currentKeys.IsKeyDown(Keys.N))
+            {
+                this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 60d);
+            }
             
-            player.Update(currentKeys, previousState, maze.pos,gameTime.ElapsedGameTime.TotalMilliseconds);
+            player.Update(currentKeys, previousState, maze.pos, maze.collisionRects[maze.currentLayer], gameTime.ElapsedGameTime.TotalMilliseconds);
             
             //Side scrolling code//
             if (player.localPosition.X <= screen_width / 2 + 30 && player.localPosition.X >= screen_width / 2 - 30)
             {
-                maze.pos.X += player.velocity.X;
+                maze.pos.X += player.globalPosition.X - player.old_global_position.X;
             }
             if (player.localPosition.Y <= screen_height / 2 + 30 && player.localPosition.Y >= screen_height / 2 - 30)
             {
-                maze.pos.Y += player.velocity.Y;
+                maze.pos.Y += player.globalPosition.Y - player.old_global_position.Y;
             }
 
             if (maze.pos.X < 0)
@@ -113,16 +124,13 @@ namespace MazeT
 
             player.localPosition.X = (int) (player.globalPosition.X - maze.pos.X + 32);
             player.localPosition.Y = (int)(player.globalPosition.Y - maze.pos.Y + 32);
+            player.RefreshRectanglePosition(maze.pos);
             maze.UpdateCollisionRects(prevMazePos - maze.pos);
-
-            //Collision handling//
-            //Handle enemy collision
-
-            //Handle wall collision
-            //player.HandleWallCollision(maze.collisionRects[maze.currentLayer]);
 
             previousState = Keyboard.GetState();
             prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
+            player.old_collision_pos = player.collision_rect.Location;
+            player.old_global_position = player.globalPosition;
             base.Update(gameTime);
         }
 
@@ -138,8 +146,8 @@ namespace MazeT
             else{
                 maze.displayRects(_spriteBatch, wall);
             }
-            _spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont, $"coll_rect_pos {player.collision_rect.Location}\n mazePos= {maze.pos}", new Vector2(0, 700), Color.White);
+            //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
+            _spriteBatch.DrawString(testFont, $"coll_rect_pos {player.collision_rect.Location}\n mazePos= {maze.pos}\n{test}", new Vector2(0, 700), Color.White);
             player.Display(_spriteBatch);
             
             _spriteBatch.End();
