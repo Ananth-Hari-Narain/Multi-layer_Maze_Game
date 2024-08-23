@@ -434,82 +434,11 @@ namespace MazeT
             } while (!isBoolArrayFilled(isPartOfMaze, true));
             
         }
-
-        //These simple display functions are kinda obsolete but I'll get rid of them later
-        public void displayMazeSimple(SpriteBatch spriteBatch, Texture2D rectColour, int layer)
-        {
-            //Assumes one has begun the sprite batch
-            for (int x = 0; x < _width; x++)
-            {
-                for (int y = 0; y < _height; y++)
-                {
-                    if (!_tiles[x, y, layer].up)
-                    {
-                        //Draw a rectangle above the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + (int) pos.X, tileSize * y + (int) pos.Y, tileSize, mazeWallWidth), Color.White);
-                    }
-                    if (!_tiles[x, y, layer].down)
-                    {
-                        //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x + (int) pos.X, tileSize * (y + 1) - (int)pos.Y - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
-                    }
-                    if (!_tiles[x, y, layer].left)
-                    {
-                        //Draw a rectangle to the left of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
-                    }
-                    if (!_tiles[x, y, layer].right)
-                    {
-                        //Draw a rectangle to the right of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) - (int)pos.X - mazeWallWidth, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
-                    }
-                }
-            }
-
-            //End the spritebatch afterwards.
-        }
-
-        //Display current layer
-        public void displayMazeSimple(SpriteBatch spriteBatch, Texture2D rectColour, Texture2D TPColour)
-        {
-            //Assumes one has begun the sprite batch
-            for (int x = 0; x < _width; x++)
-            {
-                for (int y = 0; y < _height; y++)
-                {
-                    if (!_tiles[x, y, currentLayer].up)
-                    {
-                        //Draw a rectangle above the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, tileSize, mazeWallWidth), Color.White);
-                    }
-                    if (!_tiles[x, y, currentLayer].down)
-                    {
-                        //Draw a rectangle below the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * (y + 1) - (int)pos.Y - mazeWallWidth, tileSize, mazeWallWidth), Color.White);
-                    }
-                    if (!_tiles[x, y, currentLayer].left)
-                    {
-                        //Draw a rectangle to the left of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * x - (int)pos.X, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
-                    }
-                    if (!_tiles[x, y, currentLayer].right)
-                    {
-                        //Draw a rectangle to the right of the tile
-                        spriteBatch.Draw(rectColour, new Rectangle(tileSize * (x + 1) - (int)pos.X - mazeWallWidth, tileSize * y - (int)pos.Y, mazeWallWidth, tileSize), Color.White);
-                    }
-                    if (_tiles[x, y, currentLayer].above || _tiles[x, y, currentLayer].below)
-                    {
-                        //Draw a coloured rectangle in the middle of the screen
-                        spriteBatch.Draw(TPColour, new Rectangle(tileSize * x - (int)pos.X + mazeWallWidth, tileSize * y - (int)pos.Y + mazeWallWidth, tileSize-mazeWallWidth*2, tileSize - mazeWallWidth*2), Color.White);
-                    }
-                }
-            }
-
-            //End the spritebatch afterwards.
-        }
+        
 
         public void displayMaze(SpriteBatch spriteBatch)
         {
+            //Rename "offset variables"
             const int offsetY = 128;
             const int offsetX = 128;
             const int tileW = 64;
@@ -575,7 +504,7 @@ namespace MazeT
             //Generate the top and left hand-side rectangles
             for (int z = 0; z < maxLayers; z++)
             {
-                collisionRects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, tileW));
+                collisionRects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, 20));
                 collisionRects[z].Add(new Rectangle(0, 0, wallVWidth, (height - 1) * offsetY + tileW * 2));
             }            
 
@@ -592,7 +521,7 @@ namespace MazeT
                                 (int)(x * offsetX),
                                 (int)((y + 1) * offsetY), 
                                 tileW * 2, 
-                                tileW
+                                20
                                 ));
                         }     
                         
@@ -603,7 +532,7 @@ namespace MazeT
                                 (int)((x + 1) * offsetX - wallVWidth),
                                 (int)(y * offsetY), 
                                 wallVWidth, 
-                                tileW * 3 
+                                tileW * 3 - 44
                                 ));
                         }
                     }                    

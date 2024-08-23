@@ -136,7 +136,6 @@ namespace MazeT
     internal class CollisionCharacter
     {
         public Rectangle collision_rect;
-        public Point old_collision_pos;
         public Vector2 old_global_position;
         //This is used as the floating point position of the enemies for smoother movement
         public Vector2 globalPosition;
@@ -166,6 +165,11 @@ namespace MazeT
                 }
             }
         }
+
+        public virtual void Update(long timeElapsedinMilliseconds)
+        {
+
+        }
     }
 
     internal class Player : CollisionCharacter
@@ -173,7 +177,7 @@ namespace MazeT
         public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
         private double internalTimer = 0;
         private FacingDirections direction = FacingDirections.NORTH;
-        private readonly Vector2 coll_rect_offset = new Vector2(73, 152);
+        private readonly Vector2 coll_rect_offset = new Vector2(75, 104);
         private enum PlayerState
         {
             IDLE,
@@ -192,7 +196,7 @@ namespace MazeT
         private PlayerState playerState = PlayerState.IDLE;
         public Player(int width, int height, int x, int y)
         {
-            collision_rect = new Rectangle(x+73, y+152, width, height);
+            collision_rect = new Rectangle(x+73, y+110, width, height);
             globalPosition = new Vector2(x, y);
             velocity = new Vector2(0, 0);
             for (int i = 0; i < 4; i++)
@@ -333,5 +337,7 @@ namespace MazeT
             }
         }
     }
+
+
 }
 
