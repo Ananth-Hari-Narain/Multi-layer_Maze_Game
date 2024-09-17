@@ -2,12 +2,6 @@
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Globalization;
-using System.Diagnostics.SymbolStore;
-using System.Security.Cryptography;
 
 namespace MazeT
 {
@@ -20,7 +14,7 @@ namespace MazeT
     {
         //An adjacency list of sorts
         /// <summary>
-        /// Checks if the tile is connected to tile up, down, left, or right
+        /// Checks if the tile is connected to tile up, down, left, right, below or above
         /// in that order
         /// </summary>
         public bool[] tileConnections;
@@ -552,7 +546,87 @@ namespace MazeT
                     collisionRects[z][i] = rect;
                 }
             }
+        }        
+        
+
+        public List<Point> GenerateSingleLayerPath(Point start, int pathlength, int layer)
+        {
+            List<List<Point>> all_paths = new();
+            List<Point> beginning = new();
+            beginning.Add(start);
+            GenerateSingleLayerPaths(ref all_paths, beginning, pathlength, -1, layer);
+            //Choose a random path from the list
+            Random random = new();
+            return all_paths[random.Next(all_paths.Count)];
         }
+
+        //Recursive algorithm to generate paths for an enemy.
+        //Returns a list of points in a path
+        private void GenerateSingleLayerPaths(ref List<List<Point>> all_paths, List<Point> currentPath, int pathlength, int prevDirection, int layer)
+        {
+            Point currentNode = currentPath[currentPath.Count - 1];
+            Tile currentTile = tiles[currentNode.X, currentNode.Y, layer];            
+
+            if (pathlength > 0)
+            {
+                if (currentTile.up == true && prevDirection != 1)
+                {
+
+                    currentPath.Add(new Point(currentNode.X, currentNode.Y - 1));
+                    GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 0, layer);
+                    currentPath.RemoveAt(currentPath.Count - 1);
+                }
+                if (currentTile.down == true && prevDirection != 0)
+                {
+                    currentPath.Add(new Point(currentNode.X, currentNode.Y + 1));
+                    GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 1, layer);
+                    currentPath.RemoveAt(currentPath.Count - 1);
+                }
+                if (currentTile.left == true && prevDirection != 3)
+                {
+                    currentPath.Add(new Point(currentNode.X - 1, currentNode.Y));
+                    GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 2, layer);
+                    currentPath.RemoveAt(currentPath.Count - 1);
+                }
+                if (currentTile.right == true && prevDirection != 2)
+                {
+                    currentPath.Add(new Point(currentNode.X + 1, currentNode.Y));
+                    GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 3, layer);
+                    currentPath.RemoveAt(currentPath.Count - 1);
+                }
+                else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
+                {
+                    List<Point> newPath = new();
+                    foreach (Point p in currentPath)
+                    {
+                        newPath.Add(new Point(p.X, p.Y));
+                    }
+                    all_paths.Add(newPath);
+                }
+            }
+            else
+            {
+                List<Point> newPath = new();
+                foreach (Point p in currentPath)
+                {
+                    newPath.Add(new Point(p.X, p.Y));
+                }
+                all_paths.Add(newPath);
+            }
+
+            
+        }
+        
+        public string DrawPath(List<Point> path)
+        {
+            string output = "";
+            foreach (Point p in path)
+            {
+                output += $"({p.X},{p.Y}) ";
+            }
+            return output;
+        }
+
         /// <summary>
         /// This is a tester function that will display the rectangles.
         /// </summary>
