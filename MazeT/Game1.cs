@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Mime;
 
@@ -22,6 +23,7 @@ namespace MazeT
         private Maze maze;
         private Player player;
         private SpriteFont testFont;
+        private List<Point> testpath;
 
         private KeyboardState previousState;
         public Game1()
@@ -35,26 +37,28 @@ namespace MazeT
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             
-        }
+        }        
         
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
+            previousState = Keyboard.GetState();
+            player = new Player(44, 56, -27, -86);
+            maze = new Maze(15, 15, 2);
+            testpath = maze.GenerateSingleLayerPath(new Point(5,2), 3, 0);            
 
             base.Initialize();            
-            previousState = Keyboard.GetState();
-            
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
-            maze = new Maze(20, 20, 2);
+            // TODO: use this.Content to load your game content here            
             maze.mazeWallH = Content.Load<Texture2D>("temp_wallH");
             maze.mazeWallV = Content.Load<Texture2D>("temp_wallV");
             maze.mazeFloor = Content.Load<Texture2D>("temp_floor");
+            maze.staircase = Content.Load<Texture2D>("temp_pad");
 
             wall = new Texture2D(GraphicsDevice, 1, 1);
             wall.SetData(new Color[] { Color.Black });
@@ -62,15 +66,14 @@ namespace MazeT
             TPpad = new Texture2D(GraphicsDevice, 1, 1);
             TPpad.SetData(new Color[] { Color.Purple });
 
-            player = new Player(48, 8, -27, -86);
-            player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run");
-
-            testFont = Content.Load<SpriteFont>("testFont");
-
+            
+            player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run"); 
             for (int i = 1; i < 4; i++)
             {
                 player.walk[i].sprite_sheet = player.walk[0].sprite_sheet;
-            }            
+            }
+
+            testFont = Content.Load<SpriteFont>("testFont");
         }
 
         protected override void Update(GameTime gameTime)
@@ -91,8 +94,21 @@ namespace MazeT
             {
                 this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 60d);
             }
+            else if (currentKeys.IsKeyDown(Keys.K))
+            {
+                testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
+            }
             
             player.Update(currentKeys, previousState, maze.pos, maze.collisionRects[maze.currentLayer], gameTime.ElapsedGameTime.TotalMilliseconds);
+
+            foreach (var rect in maze.TP_Pads[maze.currentLayer])
+            {
+                if (player.collision_rect.Intersects(rect) && currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
+                {
+                    maze.currentLayer = (maze.currentLayer + 1) % maze.maxLayers;
+                }
+            }
+            
             
             //Side scrolling code//
             if (player.localPosition.X <= screen_width / 2 + 30 && player.localPosition.X >= screen_width / 2 - 30)
@@ -125,11 +141,11 @@ namespace MazeT
             player.localPosition.X = (int) (player.globalPosition.X - maze.pos.X + 32);
             player.localPosition.Y = (int)(player.globalPosition.Y - maze.pos.Y + 32);
             player.RefreshRectanglePosition(maze.pos);
-            maze.UpdateCollisionRects(prevMazePos - maze.pos);
+            maze.UpdateMazeRects(prevMazePos - maze.pos);
+            test = maze.DrawPath(testpath);
 
             previousState = Keyboard.GetState();
             prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
-            player.old_collision_pos = player.collision_rect.Location;
             player.old_global_position = player.globalPosition;
             base.Update(gameTime);
         }
@@ -147,7 +163,8 @@ namespace MazeT
                 maze.displayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont, $"coll_rect_pos {player.collision_rect.Location}\n mazePos= {maze.pos}\n{test}", new Vector2(0, 700), Color.White);
+            _spriteBatch.DrawString(testFont, $"player_pos: {player.globalPosition}\n{test}", new Vector2(0, 700), Color.White);
+            maze.DrawPath(testpath, _spriteBatch,TPpad);
             player.Display(_spriteBatch);
             
             _spriteBatch.End();

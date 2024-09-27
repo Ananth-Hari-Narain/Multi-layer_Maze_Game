@@ -87,9 +87,11 @@ namespace MazeT
         public Texture2D mazeWallH;
         public Texture2D mazeWallV;
         public Texture2D mazeFloor;
+        public Texture2D staircase;
         private Rectangle[] wallRects; //to help divide up the sprite sheet
         private Rectangle[] floorRects; //to help divide up the sprite sheet
         public List<Rectangle>[] collisionRects;
+        public List<Rectangle>[] TP_Pads;
 
         /// <summary>
         /// Size in pixels
@@ -118,6 +120,7 @@ namespace MazeT
             maxLayers = layers;
             _tiles = new Tile[width, height, layers]; //2 layer maze
             collisionRects = new List<Rectangle>[maxLayers];
+            TP_Pads = new List<Rectangle>[maxLayers];
             WilsonAlgorithm();
             xmax = tileSize * width - (int)pos.X;
             ymax = tileSize * height - (int)pos.Y;
@@ -126,8 +129,9 @@ namespace MazeT
             for (int z = 0; z < maxLayers; z++)
             {
                 collisionRects[z] = new List<Rectangle>();
+                TP_Pads[z] = new List<Rectangle>();
             }
-            setCollisionRectangles();
+            setMazeRectangles();
 
         }        
 
@@ -416,9 +420,11 @@ namespace MazeT
                         }
                     }
                 }
+
                 //Add the current tile to the maze to update the new connections
-                //Flip the direction since it will not connect correctly otherwise
-                //We can do this by flipping the last bit. 
+                //Flip the direction since the current walk will not connect to
+                //the maze correctly. We can do this by flipping the last bit,
+                //due to how I have set out the connections array in the tile class.                
                 direction = direction ^ 1;
                 _tiles[currentX, currentY, currentZ].tileConnections[direction] = true;
                 hasUsedTPPad = false;
@@ -441,11 +447,16 @@ namespace MazeT
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
-                {
+                {                    
                     spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
                     spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
                     spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + tileW - pos.Y), Color.White);
                     spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    
+                    if (_tiles[x, y, currentLayer].above || _tiles[x, y, currentLayer].below)
+                    {
+                        spriteBatch.Draw(staircase, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    }
 
                     //If we are at the top
                     if (y == 0)
@@ -487,7 +498,7 @@ namespace MazeT
         /// <summary>
         /// This function is used to create the list of collision rectangles
         /// </summary>
-        public void setCollisionRectangles()
+        public void setMazeRectangles()
         {
             //These constants help to form the dimensions of the maze
             const int offsetY = 128;
@@ -512,8 +523,8 @@ namespace MazeT
                         if (_tiles[x, y, z].down == false)
                         {
                             collisionRects[z].Add(new Rectangle(
-                                (int)(x * offsetX),
-                                (int)((y + 1) * offsetY), 
+                                x * offsetX,
+                                (y + 1) * offsetY, 
                                 tileW * 2, 
                                 20
                                 ));
@@ -523,10 +534,21 @@ namespace MazeT
                         if (_tiles[x, y, z].right == false)
                         {
                             collisionRects[z].Add(new Rectangle(
-                                (int)((x + 1) * offsetX - wallVWidth),
-                                (int)(y * offsetY), 
+                                (x + 1) * offsetX - wallVWidth,
+                                y * offsetY, 
                                 wallVWidth, 
                                 tileW * 3 - 44
+                                ));
+                        }
+
+                        //Add teleportation pads
+                        if (_tiles[x, y, z].above || _tiles[x, y, z].below)
+                        {
+                            TP_Pads[z].Add(new Rectangle(
+                                x * 128,
+                                y * 128,
+                                100,
+                                100
                                 ));
                         }
                     }                    
@@ -534,7 +556,7 @@ namespace MazeT
             }
         } 
 
-        public void UpdateCollisionRects(Vector2 deltaPos)
+        public void UpdateMazeRects(Vector2 deltaPos)
         {
             
             for (int z = 0; z < maxLayers; z++)
@@ -543,7 +565,17 @@ namespace MazeT
                 {
                     Rectangle rect = collisionRects[z][i];
                     rect.Offset(deltaPos);
-                    collisionRects[z][i] = rect;
+                    collisionRects[z][i] = rect;                    
+                }
+            }
+
+            for (int z = 0; z < maxLayers; z++)
+            {
+                for (int i = 0; i < TP_Pads[z].Count; i++)
+                {
+                    Rectangle rect = TP_Pads[z][i];
+                    rect.Offset(deltaPos);
+                    TP_Pads[z][i] = rect;
                 }
             }
         }        
@@ -552,12 +584,19 @@ namespace MazeT
         public List<Point> GenerateSingleLayerPath(Point start, int pathlength, int layer)
         {
             List<List<Point>> all_paths = new();
-            List<Point> beginning = new();
-            beginning.Add(start);
+            List<Point> beginning = new() { start };
             GenerateSingleLayerPaths(ref all_paths, beginning, pathlength, -1, layer);
             //Choose a random path from the list
             Random random = new();
-            return all_paths[random.Next(all_paths.Count)];
+            List<Point> chosen_path = all_paths[random.Next(all_paths.Count)];
+
+            //Convert list indices to global coordinates.
+            for (int i = 0; i < chosen_path.Count; i++)
+            {
+                chosen_path[i] = new Point(chosen_path[i].X * 128 + 64, chosen_path[i].Y * 128 + 64);
+            }
+
+            return chosen_path;
         }
 
         //Recursive algorithm to generate paths for an enemy.
@@ -594,15 +633,15 @@ namespace MazeT
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 3, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
-                {
-                    List<Point> newPath = new();
-                    foreach (Point p in currentPath)
-                    {
-                        newPath.Add(new Point(p.X, p.Y));
-                    }
-                    all_paths.Add(newPath);
-                }
+                //else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
+                //{
+                //    List<Point> newPath = new();
+                //    foreach (Point p in currentPath)
+                //    {
+                //        newPath.Add(new Point(p.X, p.Y));
+                //    }
+                //    all_paths.Add(newPath);
+                //}
             }
             else
             {
@@ -616,15 +655,57 @@ namespace MazeT
 
             
         }
-        
         public string DrawPath(List<Point> path)
         {
             string output = "";
             foreach (Point p in path)
             {
-                output += $"({p.X},{p.Y}) ";
+                output += $"({p.X / 128},{p.Y /128}) ";
             }
             return output;
+        }
+
+
+        public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
+        {
+            int height;
+            int width;
+            int top;
+            int left;
+            for (int i = 1; i < path.Count; i++)
+            {
+                if (path[i].Y < path[i - 1].Y)
+                {
+                    width = 20;
+                    height = 128;
+                    top = path[i].Y - (int) pos.Y;
+                    left = path[i].X - (int) pos.X;
+                }
+                else if (path[i].Y > path[i - 1].Y)
+                {
+                    width = 20;
+                    height = 128;
+                    top = path[i - 1].Y - (int)pos.Y;
+                    left = path[i - 1].X - (int)pos.X;
+                }
+                else if (path[i].X < path[i-1].X)
+                {
+                    width = 128;
+                    height = 20;                   
+                    left = path[i].X - (int)pos.X;
+                    top = path[i].Y - (int)pos.Y;
+                }
+
+                else
+                {
+                    width = 128;
+                    height = 20;
+                    left = path[i - 1].X - (int)pos.X;
+                    top = path[i - 1].Y - (int)pos.Y;
+                }
+
+                spriteBatch.Draw(colour, new Rectangle(left, top, width, height), Color.White);
+            }
         }
 
         /// <summary>
