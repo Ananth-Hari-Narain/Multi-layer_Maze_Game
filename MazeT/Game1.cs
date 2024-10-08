@@ -16,10 +16,11 @@ namespace MazeT
         private const int screen_height = 800;
         private bool mazeTest = true; //testing code
         private string test = "";
-        private Vector2 prevMazePos = new Vector2();
+        private Vector2 prevMazePos = new Vector2();       
 
         private Texture2D wall;
         private Texture2D TPpad;
+        private List<CollisionCharacter>[] enemies;
         private Maze maze;
         private Player player;
         private SpriteFont testFont;
@@ -42,10 +43,19 @@ namespace MazeT
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
-            previousState = Keyboard.GetState();
-            player = new Player(44, 56, -27, -86);
+            previousState = Keyboard.GetState();            
             maze = new Maze(15, 15, 2);
-            testpath = maze.GenerateSingleLayerPath(new Point(5,2), 3, 0);            
+            player = new Player(44, 56, -27, -86, maze.collisionRects);
+            testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 8, 0);
+
+            //Initialise enemy list
+            enemies = new List<CollisionCharacter>[maze.maxLayers];
+            for (int i = 0; i < maze.maxLayers; i++)
+            {
+                enemies[i] = new List<CollisionCharacter>();
+            }
+
+            enemies[0].Add(new BlindEnemy(0, testpath));
 
             base.Initialize();            
         }
@@ -73,6 +83,9 @@ namespace MazeT
                 player.walk[i].sprite_sheet = player.walk[0].sprite_sheet;
             }
 
+            BlindEnemy.run[0].sprite_sheet = Content.Load<Texture2D>("ogre_run");
+            BlindEnemy.run[1].sprite_sheet = BlindEnemy.run[0].sprite_sheet;
+
             testFont = Content.Load<SpriteFont>("testFont");
         }
 
@@ -99,8 +112,13 @@ namespace MazeT
                 testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
             }
             
-            player.Update(currentKeys, previousState, maze.pos, maze.collisionRects[maze.currentLayer], gameTime.ElapsedGameTime.TotalMilliseconds);
-
+            player.Update(currentKeys, previousState, maze.pos, maze.currentLayer, gameTime.ElapsedGameTime.TotalMilliseconds);  
+            foreach (var enemy in enemies[maze.currentLayer])
+            {
+                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
+            }
+                      
+            
             foreach (var rect in maze.TP_Pads[maze.currentLayer])
             {
                 if (player.collision_rect.Intersects(rect) && currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
@@ -138,9 +156,12 @@ namespace MazeT
                 maze.pos.Y = maze.ymax - screen_height + 64;
             }
 
-            player.localPosition.X = (int) (player.globalPosition.X - maze.pos.X + 32);
-            player.localPosition.Y = (int)(player.globalPosition.Y - maze.pos.Y + 32);
-            player.RefreshRectanglePosition(maze.pos);
+            player.UpdateLocalPosition(maze.pos, 32, 32);
+            foreach (var enemy in enemies[maze.currentLayer])
+            {
+                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
+                enemy.UpdateLocalPosition(maze.pos);
+            }
             maze.UpdateMazeRects(prevMazePos - maze.pos);
             test = maze.DrawPath(testpath);
 
@@ -165,8 +186,12 @@ namespace MazeT
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
             _spriteBatch.DrawString(testFont, $"player_pos: {player.globalPosition}\n{test}", new Vector2(0, 700), Color.White);
             maze.DrawPath(testpath, _spriteBatch,TPpad);
-            player.Display(_spriteBatch);
-            
+            _spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
+            player.Display(_spriteBatch);            
+            foreach (var enemy in enemies[maze.currentLayer])
+            {
+                enemy.Display(_spriteBatch);
+            }
             _spriteBatch.End();
 
             base.Draw(gameTime);
