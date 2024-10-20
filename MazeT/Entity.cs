@@ -1,10 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
 using System.Collections.Generic;
-using System.Numerics;
-using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace MazeT
 {
@@ -36,7 +33,7 @@ namespace MazeT
     internal class AnimatedSpriteSheet
     {
         public Texture2D sprite_sheet;
-        private Rectangle[] _drawingBounds;
+        private readonly Rectangle[] _drawingBounds;
         private int _animationIndex;
 
 
@@ -46,9 +43,9 @@ namespace MazeT
         /// If 1, it indicates the order is 1, 2, 3, 2, 1, 2, 3
         /// If -1, it indicates the same as above.
         /// </summary>
-        private sbyte _orderOfSprites; 
+        private int _orderOfSprites; 
         
-        public AnimatedSpriteSheet(Rectangle[] rects, sbyte order, int startingIndex = 0)
+        public AnimatedSpriteSheet(Rectangle[] rects, int order, int startingIndex = 0)
         {
             _orderOfSprites = order;
             _animationIndex = startingIndex;
@@ -57,7 +54,7 @@ namespace MazeT
         
         //Assuming that sprites are going across and not vertically down
         //This constructor is used to automatically create the bounding rectangles array.
-        public AnimatedSpriteSheet(int width, int height, int noRects, sbyte order, int startY, int spacing = 0, int startingIndex = 0)
+        public AnimatedSpriteSheet(int width, int height, int noRects, int order, int startY, int spacing = 0, int startingIndex = 0)
         {
             _orderOfSprites = order;
             _animationIndex = startingIndex;
@@ -140,8 +137,8 @@ namespace MazeT
         public Rectangle collision_rect;
         public Vector2 old_global_position;
         //This is used as the floating point position of the enemies for smoother movement
-        public Vector2 globalPosition;
-        public Vector2 localPosition; //Used for displaying
+        public Vector2 global_position;
+        public Vector2 local_position; //Used for displaying
         public Vector2 velocity;
         public static List<Rectangle>[] wall_rects;
         protected Vector2 coll_rect_offset;
@@ -150,20 +147,20 @@ namespace MazeT
         /// This is the function that will handle collision with walls for all objects 
         /// in the maze game.
         /// </summary>
-        public void HandleWallCollision(List<Rectangle> wall_rects, bool checkX)
+        protected void HandleWallCollision(int maze_layer, bool checkX)
         {
-            foreach (Rectangle rect in wall_rects)
+            foreach (Rectangle rect in wall_rects[maze_layer])
             {                
                 if (collision_rect.Intersects(rect))
                 {
                     if (checkX)
                     {
-                        globalPosition.X -= velocity.X;
+                        global_position.X -= velocity.X;
                         collision_rect.X -= (int)velocity.X;
                     }
                     else
                     {
-                        globalPosition.Y -= velocity.Y;
+                        global_position.Y -= velocity.Y;
                         collision_rect.Y -= (int)velocity.Y;
                     }
                 }
@@ -177,17 +174,17 @@ namespace MazeT
 
         public void UpdateLocalPosition(Vector2 mazePos, int offsetX = 0, int offsetY = 0)
         {
-            localPosition.X = (int)(globalPosition.X - mazePos.X + offsetX);
-            localPosition.Y = (int)(globalPosition.Y - mazePos.Y + offsetY);
-            collision_rect.Location = (globalPosition - mazePos + coll_rect_offset).ToPoint();
+            local_position.X = (int)(global_position.X - mazePos.X + offsetX);
+            local_position.Y = (int)(global_position.Y - mazePos.Y + offsetY);
+            collision_rect.Location = (global_position - mazePos + coll_rect_offset).ToPoint();
         }
 
-        public void RefreshRectanglePosition(Vector2 mazePos)
+        public void UpdateRectanglePosition(Vector2 mazePos)
         {
-            collision_rect.Location = (globalPosition - mazePos + coll_rect_offset).ToPoint();
+            collision_rect.Location = (global_position - mazePos + coll_rect_offset).ToPoint();
         }
 
-        public virtual void Display(SpriteBatch _spritebatch)
+        public virtual void Display(SpriteBatch spritebatch)
         {
 
         }
@@ -196,7 +193,7 @@ namespace MazeT
     internal class Player : CollisionCharacter
     {        
         public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
-        private double internalTimer = 0;
+        private double internal_timer = 0;
         private FacingDirections direction = FacingDirections.NORTH;
         
         private enum PlayerState
@@ -214,13 +211,13 @@ namespace MazeT
             WEST = 3
         }
 
-        private PlayerState playerState = PlayerState.IDLE;
+        private PlayerState player_state = PlayerState.IDLE;
         public Player(int width, int height, int x, int y, List<Rectangle>[] wall_rects)
         {
             CollisionCharacter.wall_rects = wall_rects;
             coll_rect_offset = new Vector2(75, 104);
             collision_rect = new Rectangle(x+75, y+104, width, height);
-            globalPosition = new Vector2(x, y);
+            global_position = new Vector2(x, y);
             velocity = new Vector2(0, 0);
             
             for (int i = 0; i < 4; i++)
@@ -230,119 +227,119 @@ namespace MazeT
         }
         
 
-        public void Update(KeyboardState currentKeys, KeyboardState previousKeys, Vector2 mazePos, int mazeLayer, double timeElapsed)
+        public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, double time_elapsed)
         {
             int walkAnimationDelay = 200;
             int playerSpeed = 2;
             bool directionKeyPressed = false;
-            if (currentKeys.IsKeyDown(Keys.LeftShift) || currentKeys.IsKeyDown(Keys.RightShift))
+            if (current_keys.IsKeyDown(Keys.LeftShift) || current_keys.IsKeyDown(Keys.RightShift))
             {
                 playerSpeed = 4;
                 walkAnimationDelay = 120;
             }
-            if (currentKeys.IsKeyDown(Keys.Up) || currentKeys.IsKeyDown(Keys.W))
+            if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W))
             {
                 directionKeyPressed = true;
                 direction = FacingDirections.NORTH;
                 velocity.X = 0;
                 velocity.Y = -playerSpeed;
-                if (playerState != PlayerState.WALKING)
+                if (player_state != PlayerState.WALKING)
                 {
-                    playerState = PlayerState.WALKING;
-                    internalTimer = walkAnimationDelay;
+                    player_state = PlayerState.WALKING;
+                    internal_timer = walkAnimationDelay;
                 }                
-                if (internalTimer <= 0)
+                if (internal_timer <= 0)
                 {
                     walk[(int) direction].UpdateAnimationFrame();
-                    internalTimer = walkAnimationDelay;
+                    internal_timer = walkAnimationDelay;
                 }
             }
-            else if (currentKeys.IsKeyDown(Keys.Down) || currentKeys.IsKeyDown(Keys.S))
+            else if (current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
             {
                 directionKeyPressed = true;
                 direction = FacingDirections.SOUTH;
                 velocity.X = 0;
                 velocity.Y = playerSpeed;
-                if (playerState != PlayerState.WALKING)
+                if (player_state != PlayerState.WALKING)
                 {
-                    playerState = PlayerState.WALKING;
-                    internalTimer = walkAnimationDelay;
+                    player_state = PlayerState.WALKING;
+                    internal_timer = walkAnimationDelay;
                 }
-                if (internalTimer <= 0)
+                if (internal_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internalTimer = walkAnimationDelay;
+                    internal_timer = walkAnimationDelay;
                 }
             }
 
             collision_rect.Offset(0, velocity.Y);
-            globalPosition.Y += velocity.Y;
-            HandleWallCollision(wall_rects[mazeLayer], false);
+            global_position.Y += velocity.Y;
+            HandleWallCollision(maze_layer, false);
 
-            if (currentKeys.IsKeyDown(Keys.Up) || currentKeys.IsKeyDown(Keys.W) || currentKeys.IsKeyDown(Keys.Down) || currentKeys.IsKeyDown(Keys.S))
+            if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W) || current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
             {
                 //pass
             }
-            else if (currentKeys.IsKeyDown(Keys.Right) || currentKeys.IsKeyDown(Keys.D))
+            else if (current_keys.IsKeyDown(Keys.Right) || current_keys.IsKeyDown(Keys.D))
             {
                 directionKeyPressed = true;
                 direction = FacingDirections.EAST;
                 velocity.Y = 0;
                 velocity.X = playerSpeed;
-                if (playerState != PlayerState.WALKING)
+                if (player_state != PlayerState.WALKING)
                 {
-                    playerState = PlayerState.WALKING;
-                    internalTimer = walkAnimationDelay;
+                    player_state = PlayerState.WALKING;
+                    internal_timer = walkAnimationDelay;
                 }
-                if (internalTimer <= 0)
+                if (internal_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internalTimer = walkAnimationDelay;
+                    internal_timer = walkAnimationDelay;
                 }
             }
-            else if (currentKeys.IsKeyDown(Keys.Left) || currentKeys.IsKeyDown(Keys.A))
+            else if (current_keys.IsKeyDown(Keys.Left) || current_keys.IsKeyDown(Keys.A))
             {
                 directionKeyPressed = true;
                 direction = FacingDirections.WEST;
                 velocity.Y = 0;
                 velocity.X = -playerSpeed;
-                if (playerState != PlayerState.WALKING)
+                if (player_state != PlayerState.WALKING)
                 {
-                    playerState = PlayerState.WALKING;
-                    internalTimer = walkAnimationDelay;
+                    player_state = PlayerState.WALKING;
+                    internal_timer = walkAnimationDelay;
                 }
-                if (internalTimer <= 0)
+                if (internal_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internalTimer = walkAnimationDelay;
+                    internal_timer = walkAnimationDelay;
                 }
             }
 
             collision_rect.Offset(velocity.X, 0);
-            globalPosition.X += velocity.X;
-            HandleWallCollision(wall_rects[mazeLayer], true);
+            global_position.X += velocity.X;
+            HandleWallCollision(maze_layer, true);
 
             if (!directionKeyPressed)
             {
                 velocity.X = 0;
                 velocity.Y = 0;
-                playerState = PlayerState.IDLE;
+                player_state = PlayerState.IDLE;
                 walk[(int) direction].ResetAnimation();
             }
            
-            RefreshRectanglePosition(mazePos);
-            internalTimer -= timeElapsed;
+            UpdateRectanglePosition(maze_pos);
+            internal_timer -= time_elapsed;
         }
 
         public override void Display(SpriteBatch spriteBatch)
         {
-            if (playerState == PlayerState.WALKING)
+            if (player_state == PlayerState.WALKING)
             {
-                walk[(int)direction].Display(spriteBatch, localPosition);
+                walk[(int)direction].Display(spriteBatch, local_position);
             }            
-            else if (playerState == PlayerState.IDLE)
+            else if (player_state == PlayerState.IDLE)
             {
-                walk[(int)direction].Display(spriteBatch, localPosition, 1);
+                walk[(int)direction].Display(spriteBatch, local_position, 1);
             }
         }
     }
@@ -357,12 +354,11 @@ namespace MazeT
         public int power;
         //The ogre can run left or right (but can move up or down)
         public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
-        private int _internalAnimTimer = 0; //Used for animation
-        public List<Point> path;         
-        private Point target;
-        private int targetIndex;
-        private int prevTargetIndex;
-        private bool isFacingLeft = true;
+        private int internal_anim_timer = 0; //Used for animation
+        public List<Point> path;
+        private int target_index;
+        private int prev_target_index;
+        private bool is_facing_left = true;
 
         public BlindEnemy(int currentLevel, List<Point> path)
         {
@@ -373,25 +369,23 @@ namespace MazeT
             //Path should be determined in the main game loop to help
             //avoid conflicting paths
             this.path = path;
-            globalPosition = path[0].ToVector2();
-            target = path[1];
-            prevTargetIndex = 0;
-            targetIndex = 1;
+            global_position = path[0].ToVector2();
+            prev_target_index = 0;
+            target_index = 1;
 
             //Create animation frames
-            run[0] = new AnimatedSpriteSheet(128, 112, 4, 0, 0);
-            run[1] = new AnimatedSpriteSheet(128, 112, 4, 0, 112);
-
+            run[0] = new AnimatedSpriteSheet(64, 56, 4, 0, 56); //left
+            run[1] = new AnimatedSpriteSheet(64, 56, 4, 0, 0); //right
         }
 
         public override void Update(long timeElapsedinMilliseconds, int mazeLayer)
         {
-            const int walk_anim_delay = 200;
+            const int walk_anim_delay = 310;
             //If enemy is not being attacked (in which case they are pushed back slightly)
             if (true)
             {
-                //Determine a velocity based on current position and target position                
-                velocity = target.ToVector2() - globalPosition;
+                //Determine a velocity based on enemy's centre's position and target position                
+                velocity = path[target_index].ToVector2() - global_position;
                 //make sure magnitude of velocity = set speed (divide velocity by magnitude)
                 velocity = velocity * 1 / velocity.Length();
                 
@@ -404,86 +398,83 @@ namespace MazeT
 
             //Update X coords and do collision handling function
             collision_rect.Offset(0, velocity.X);
-            globalPosition.X += velocity.X;
-            HandleWallCollision(wall_rects[mazeLayer], true);
+            global_position.X += velocity.X;
 
             //Update Y coords and do same thing
             collision_rect.Offset(0, velocity.Y);
-            globalPosition.Y += velocity.Y;
-            HandleWallCollision(wall_rects[mazeLayer], false);
+            global_position.Y += velocity.Y;
 
             //Decide facing direction
             if (velocity.X < 0)
             {
-                isFacingLeft = true;
+                is_facing_left = true;
             }
             else if (velocity.X > 0)
             {
-                isFacingLeft = false;
+                is_facing_left = false;
             }
 
             //Update animation frame
-            if (_internalAnimTimer <= 0)
-            {
-                _internalAnimTimer = walk_anim_delay;
-                if (isFacingLeft)
-                {
-                    run[1].UpdateAnimationFrame();
-                }
-                else
+            if (internal_anim_timer <= 0)
+            {                
+                if (is_facing_left)
                 {
                     run[0].UpdateAnimationFrame();
                 }
-                
+                else
+                {
+                    run[1].UpdateAnimationFrame();
+                }
+                internal_anim_timer = walk_anim_delay;
+
             }
-            _internalAnimTimer -= (int) timeElapsedinMilliseconds;
+            internal_anim_timer -= (int) timeElapsedinMilliseconds;
             
 
             //Update target position once reached (when you are within 5 units from the target)
-            if (Vector2.DistanceSquared(target.ToVector2(), globalPosition) <= 25)
+            if (Vector2.DistanceSquared(path[target_index].ToVector2(), global_position - coll_rect_offset) <= 25)
             {
-                if (targetIndex != path.Count - 1 && targetIndex != 0)
+                if (target_index != path.Count - 1 && target_index != 0)
                 {
                     //If enemy is walking "forward" on path
-                    if (prevTargetIndex < targetIndex)
+                    if (prev_target_index < target_index)
                     {
-                        prevTargetIndex = targetIndex;
-                        targetIndex++;                        
+                        prev_target_index = target_index;
+                        target_index++;                        
                     }
                     //If enemy is walking back along the path
                     else
                     {
-                        prevTargetIndex = targetIndex;
-                        targetIndex--;                        
+                        prev_target_index = target_index;
+                        target_index--;                        
                     }
                     
                 }
                 //If we need to turn around and we are at the start
-                else if (targetIndex == 0)
+                else if (target_index == 0)
                 {
-                    prevTargetIndex = targetIndex;
-                    targetIndex++;
+                    prev_target_index = target_index;
+                    target_index++;
                 }
 
                 //If we are at the end of the path
                 else
                 {
-                    prevTargetIndex = targetIndex;
-                    targetIndex--;
+                    prev_target_index = target_index;
+                    target_index--;
                 }
-                target = path[targetIndex];
             }
         }
 
         public override void Display(SpriteBatch spritebatch)
         {
-            if (isFacingLeft)
+            if (is_facing_left)
             {
-                run[0].Display(spritebatch, localPosition);
+                run[0].Display(spritebatch, local_position);
             }
             else
             {
-                run[1].Display(spritebatch, localPosition);
+                run[1].Display(spritebatch, local_position);
             }
         }
     }

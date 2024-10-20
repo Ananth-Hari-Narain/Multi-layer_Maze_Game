@@ -593,7 +593,7 @@ namespace MazeT
             //Convert list indices to global coordinates.
             for (int i = 0; i < chosen_path.Count; i++)
             {
-                chosen_path[i] = new Point(chosen_path[i].X * 128 + 64, chosen_path[i].Y * 128 + 64);
+                chosen_path[i] = new Point(chosen_path[i].X * 128 + 16, chosen_path[i].Y * 128 + 64);
             }
 
             return chosen_path;
@@ -633,15 +633,15 @@ namespace MazeT
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 3, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                //else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
-                //{
-                //    List<Point> newPath = new();
-                //    foreach (Point p in currentPath)
-                //    {
-                //        newPath.Add(new Point(p.X, p.Y));
-                //    }
-                //    all_paths.Add(newPath);
-                //}
+                else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
+                {
+                    List<Point> newPath = new();
+                    foreach (Point p in currentPath)
+                    {
+                        newPath.Add(new Point(p.X, p.Y));
+                    }
+                    all_paths.Add(newPath);
+                }
             }
             else
             {
