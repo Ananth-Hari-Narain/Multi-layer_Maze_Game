@@ -19,37 +19,37 @@ namespace MazeT
         /// </summary>
         public bool[] tileConnections;
 
-        public bool up
+        public bool Up
         {
             get { return tileConnections[0]; }
             set { tileConnections[0] = value; }
         }
 
-        public bool down
+        public bool Down
         {
             get { return tileConnections[1]; }
             set { tileConnections[1] = value; }
         }
 
-        public bool left
+        public bool Left
         {
             get { return tileConnections[2]; }
             set { tileConnections[2] = value; }
         }
 
-        public bool right
+        public bool Right
         {
             get { return tileConnections[3]; }
             set { tileConnections[3] = value; }
         }
 
-        public bool below
+        public bool Below
         {
             get { return tileConnections[4]; }
             set { tileConnections[4] = value; }
         }
 
-        public bool above
+        public bool Above
         {
             get { return tileConnections[5]; }
             set { tileConnections[5] = value; }
@@ -74,23 +74,21 @@ namespace MazeT
     internal class Maze
     {
         private Tile[,,] _tiles;
-        public Tile[,,] tiles { get { return _tiles; } set { _tiles = value; } }
+        public Tile[,,] Tiles { get { return _tiles; } set { _tiles = value; } }
 
-        private int _width;
-        public int width { get { return _width; } }
+        private readonly int width;
 
-        private int _height;
-        public int height { get { return _height; } }
-        public int currentLayer { get; set; }
-        public int maxLayers { get; set; }
+        private readonly int height;
+        public int current_layer;
+        public int max_layers;
 
-        public Texture2D mazeWallH;
-        public Texture2D mazeWallV;
-        public Texture2D mazeFloor;
+        public Texture2D maze_wall_H;
+        public Texture2D maze_wall_V;
+        public Texture2D maze_floor;
         public Texture2D staircase;
         private Rectangle[] wallRects; //to help divide up the sprite sheet
         private Rectangle[] floorRects; //to help divide up the sprite sheet
-        public List<Rectangle>[] collisionRects;
+        public List<Rectangle>[] collision_rects;
         public List<Rectangle>[] TP_Pads;
 
         /// <summary>
@@ -114,28 +112,28 @@ namespace MazeT
         /// </summary>
         public Maze(int width, int height, int layers = 2)
         {
-            _width = width;
-            _height = height;
-            currentLayer = 0;
-            maxLayers = layers;
+            this.width = width;
+            this.height = height;
+            current_layer = 0;
+            max_layers = layers;
             _tiles = new Tile[width, height, layers]; //2 layer maze
-            collisionRects = new List<Rectangle>[maxLayers];
-            TP_Pads = new List<Rectangle>[maxLayers];
+            collision_rects = new List<Rectangle>[max_layers];
+            TP_Pads = new List<Rectangle>[max_layers];
             WilsonAlgorithm();
             xmax = tileSize * width - (int)pos.X;
             ymax = tileSize * height - (int)pos.Y;
 
             //Initialise the collision rect array
-            for (int z = 0; z < maxLayers; z++)
+            for (int z = 0; z < max_layers; z++)
             {
-                collisionRects[z] = new List<Rectangle>();
+                collision_rects[z] = new List<Rectangle>();
                 TP_Pads[z] = new List<Rectangle>();
             }
-            setMazeRectangles();
+            SetMazeRectangles();
 
         }        
 
-        public static bool isBoolArrayFilled(bool[,,] array, bool value)
+        public static bool IsBoolArrayFilled(bool[,,] array, bool value)
         {
             for (int x = 0; x < array.GetLength(0); x++)
             {
@@ -153,9 +151,9 @@ namespace MazeT
 
         private void WilsonAlgorithm()
         {
-            Tile[,,] currentWalk = new Tile[width, height, maxLayers];
-            bool[,,] isVisited = new bool[width, height, maxLayers];
-            bool[,,] isPartOfMaze = new bool[width, height, maxLayers];
+            Tile[,,] currentWalk = new Tile[width, height, max_layers];
+            bool[,,] isVisited = new bool[width, height, max_layers];
+            bool[,,] isPartOfMaze = new bool[width, height, max_layers];
 
             //Initialise all the values in the arrays
             //including the member _tiles
@@ -163,9 +161,9 @@ namespace MazeT
             {
                 for (int j = 0; j < height; j++)
                 {
-                    for (int k = 0; k < maxLayers; k++)
+                    for (int k = 0; k < max_layers; k++)
                     {
-                        tiles[i, j, k] = new Tile();
+                        Tiles[i, j, k] = new Tile();
                         currentWalk[i, j, k] = new Tile();
                         isVisited[i, j, k] = false;
                         isPartOfMaze[i, j, k] = false;
@@ -196,7 +194,7 @@ namespace MazeT
                 {
                     for (int y = 0; y < height && _continue; y++)
                     {
-                        for (int z = 0; z < maxLayers && _continue; z++)
+                        for (int z = 0; z < max_layers && _continue; z++)
                         {
                             if (!isPartOfMaze[x, y, z])
                             {
@@ -245,8 +243,8 @@ namespace MazeT
                         if (currentY != 0)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].up = true;
-                            currentWalk[currentX, currentY - 1, currentZ].down = true;
+                            currentWalk[currentX, currentY, currentZ].Up = true;
+                            currentWalk[currentX, currentY - 1, currentZ].Down = true;
                             //Go UP
                             currentY--;
                             direction = 0;
@@ -255,8 +253,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].down = true;
-                            currentWalk[currentX, currentY + 1, currentZ].up = true;
+                            currentWalk[currentX, currentY, currentZ].Down = true;
+                            currentWalk[currentX, currentY + 1, currentZ].Up = true;
                             //Go down
                             currentY++;
                             direction = 1;//Change the direction (important for later)
@@ -269,8 +267,8 @@ namespace MazeT
                         if (currentY != height - 1)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].down = true;
-                            currentWalk[currentX, currentY + 1, currentZ].up = true;
+                            currentWalk[currentX, currentY, currentZ].Down = true;
+                            currentWalk[currentX, currentY + 1, currentZ].Up = true;
                             //Go down
                             currentY++;
                             direction = 1;
@@ -278,8 +276,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tile
-                            currentWalk[currentX, currentY, currentZ].up = true;
-                            currentWalk[currentX, currentY - 1, currentZ].down = true;
+                            currentWalk[currentX, currentY, currentZ].Up = true;
+                            currentWalk[currentX, currentY - 1, currentZ].Down = true;
                             //Go up
                             currentY--;
                             direction = 0;
@@ -292,8 +290,8 @@ namespace MazeT
                         if (currentX != width - 1)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].right = true;
-                            currentWalk[currentX + 1, currentY, currentZ].left = true;
+                            currentWalk[currentX, currentY, currentZ].Right = true;
+                            currentWalk[currentX + 1, currentY, currentZ].Left = true;
                             //Go Right
                             currentX++;
                             direction = 3;
@@ -301,8 +299,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].left = true;
-                            currentWalk[currentX - 1, currentY, currentZ].right = true;
+                            currentWalk[currentX, currentY, currentZ].Left = true;
+                            currentWalk[currentX - 1, currentY, currentZ].Right = true;
                             //Go left
                             currentX--;
                             direction = 2;
@@ -315,8 +313,8 @@ namespace MazeT
                         if (currentX != 0)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].left = true;
-                            currentWalk[currentX - 1, currentY, currentZ].right = true;
+                            currentWalk[currentX, currentY, currentZ].Left = true;
+                            currentWalk[currentX - 1, currentY, currentZ].Right = true;
                             //Go left
                             currentX--;
                             direction = 2;
@@ -324,8 +322,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].right = true;
-                            currentWalk[currentX + 1, currentY, currentZ].left = true;
+                            currentWalk[currentX, currentY, currentZ].Right = true;
+                            currentWalk[currentX + 1, currentY, currentZ].Left = true;
                             //Go right
                             currentX++;
                             direction = 3;
@@ -338,8 +336,8 @@ namespace MazeT
                         if (currentZ != 0)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].below = true;
-                            currentWalk[currentX, currentY, currentZ - 1].above = true;
+                            currentWalk[currentX, currentY, currentZ].Below = true;
+                            currentWalk[currentX, currentY, currentZ - 1].Above = true;
                             //Go to layer below
                             currentZ--;
                             direction = 4;
@@ -347,8 +345,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].above = true;
-                            currentWalk[currentX, currentY, currentZ + 1].below = true;
+                            currentWalk[currentX, currentY, currentZ].Above = true;
+                            currentWalk[currentX, currentY, currentZ + 1].Below = true;
                             //Go to layer above
                             currentZ++;
                             direction = 5;
@@ -359,11 +357,11 @@ namespace MazeT
                     else
                     {
                         //Try going to the layer above
-                        if (currentZ < maxLayers - 1)
+                        if (currentZ < max_layers - 1)
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].above = true;
-                            currentWalk[currentX, currentY, currentZ + 1].below = true;
+                            currentWalk[currentX, currentY, currentZ].Above = true;
+                            currentWalk[currentX, currentY, currentZ + 1].Below = true;
                             //Go to layer above
                             currentZ++;
                             direction = 5;
@@ -371,8 +369,8 @@ namespace MazeT
                         else
                         {
                             //Connect the tiles together
-                            currentWalk[currentX, currentY, currentZ].below = true;
-                            currentWalk[currentX, currentY, currentZ - 1].above = true;
+                            currentWalk[currentX, currentY, currentZ].Below = true;
+                            currentWalk[currentX, currentY, currentZ - 1].Above = true;
                             //Go to layer below
                             currentZ--;
                             direction = 4;
@@ -387,7 +385,7 @@ namespace MazeT
                         {
                             for (int y = 0; y < height; y++)
                             {
-                                for (int z = 0; z < maxLayers; z++)
+                                for (int z = 0; z < max_layers; z++)
                                 {
                                     isVisited[x, y, z] = false;
                                     currentWalk[x, y, z].tileConnections = new bool[] { false, false, false, false, false, false };
@@ -407,7 +405,7 @@ namespace MazeT
                 {
                     for (int y = 0; y < height; y++)
                     {
-                        for (int z = 0; z < maxLayers; z++)
+                        for (int z = 0; z < max_layers; z++)
                         {
                             if (isVisited[x, y, z])
                             {
@@ -431,12 +429,12 @@ namespace MazeT
                 noTPPadsInCurrentWalk = 0;
                 walkLength = 0;
 
-            } while (!isBoolArrayFilled(isPartOfMaze, true));
+            } while (!IsBoolArrayFilled(isPartOfMaze, true));
             
         }
         
 
-        public void displayMaze(SpriteBatch spriteBatch)
+        public void DisplayMaze(SpriteBatch spriteBatch)
         {
             //Rename "offset variables"
             const int offsetY = 128;
@@ -448,12 +446,12 @@ namespace MazeT
             {
                 for (int y = 0; y < height; y++)
                 {                    
-                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(mazeFloor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
                     
-                    if (_tiles[x, y, currentLayer].above || _tiles[x, y, currentLayer].below)
+                    if (_tiles[x, y, current_layer].Above || _tiles[x, y, current_layer].Below)
                     {
                         spriteBatch.Draw(staircase, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
                     }
@@ -461,14 +459,14 @@ namespace MazeT
                     //If we are at the top
                     if (y == 0)
                     {
-                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX - pos.X, -pos.Y), Color.White);
-                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX + tileW - pos.X, -pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX - pos.X, -pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX + tileW - pos.X, -pos.Y), Color.White);
                     }
 
-                    if (_tiles[x, y, currentLayer].down == false)
+                    if (_tiles[x, y, current_layer].Down == false)
                     {
-                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(mazeWallH, new Vector2(x * offsetX + tileW - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX + tileW - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
                     }
                 }
             }
@@ -478,18 +476,18 @@ namespace MazeT
                 for (int y = 0; y < height; y++)
                 {
                     //Display right walls (if applicable)  
-                    if (!_tiles[x, y, currentLayer].right)
+                    if (!_tiles[x, y, current_layer].Right)
                     {
-                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                        spriteBatch.Draw(mazeWallV, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
                     }                   
 
                     //If we are on the leftmost side of the maze
                     if (x == 0)
                     {
-                        spriteBatch.Draw(mazeWallV, new Vector2(-pos.X, y * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(mazeWallV, new Vector2(-pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * offsetY + tileW - pos.Y), Color.White);
                     }
                 }
             }
@@ -498,7 +496,7 @@ namespace MazeT
         /// <summary>
         /// This function is used to create the list of collision rectangles
         /// </summary>
-        public void setMazeRectangles()
+        public void SetMazeRectangles()
         {
             //These constants help to form the dimensions of the maze
             const int offsetY = 128;
@@ -507,22 +505,22 @@ namespace MazeT
             const int wallVWidth = 32;
 
             //Generate the top and left hand-side rectangles
-            for (int z = 0; z < maxLayers; z++)
+            for (int z = 0; z < max_layers; z++)
             {
-                collisionRects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, 20));
-                collisionRects[z].Add(new Rectangle(0, 0, wallVWidth, (height - 1) * offsetY + tileW * 2));
+                collision_rects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, 20));
+                collision_rects[z].Add(new Rectangle(0, 0, wallVWidth, (height - 1) * offsetY + tileW * 2));
             }            
 
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    for (int z = 0; z < maxLayers; z++)
+                    for (int z = 0; z < max_layers; z++)
                     {
                         //Add bottom rectangles (this code should mirror display code)
-                        if (_tiles[x, y, z].down == false)
+                        if (_tiles[x, y, z].Down == false)
                         {
-                            collisionRects[z].Add(new Rectangle(
+                            collision_rects[z].Add(new Rectangle(
                                 x * offsetX,
                                 (y + 1) * offsetY, 
                                 tileW * 2, 
@@ -531,9 +529,9 @@ namespace MazeT
                         }     
                         
                         //Add right rectangles
-                        if (_tiles[x, y, z].right == false)
+                        if (_tiles[x, y, z].Right == false)
                         {
-                            collisionRects[z].Add(new Rectangle(
+                            collision_rects[z].Add(new Rectangle(
                                 (x + 1) * offsetX - wallVWidth,
                                 y * offsetY, 
                                 wallVWidth, 
@@ -542,7 +540,7 @@ namespace MazeT
                         }
 
                         //Add teleportation pads
-                        if (_tiles[x, y, z].above || _tiles[x, y, z].below)
+                        if (_tiles[x, y, z].Above || _tiles[x, y, z].Below)
                         {
                             TP_Pads[z].Add(new Rectangle(
                                 x * 128,
@@ -559,17 +557,17 @@ namespace MazeT
         public void UpdateMazeRects(Vector2 deltaPos)
         {
             
-            for (int z = 0; z < maxLayers; z++)
+            for (int z = 0; z < max_layers; z++)
             {
-                for (int i = 0; i < collisionRects[z].Count; i++)
+                for (int i = 0; i < collision_rects[z].Count; i++)
                 {
-                    Rectangle rect = collisionRects[z][i];
+                    Rectangle rect = collision_rects[z][i];
                     rect.Offset(deltaPos);
-                    collisionRects[z][i] = rect;                    
+                    collision_rects[z][i] = rect;                    
                 }
             }
 
-            for (int z = 0; z < maxLayers; z++)
+            for (int z = 0; z < max_layers; z++)
             {
                 for (int i = 0; i < TP_Pads[z].Count; i++)
                 {
@@ -604,36 +602,36 @@ namespace MazeT
         private void GenerateSingleLayerPaths(ref List<List<Point>> all_paths, List<Point> currentPath, int pathlength, int prevDirection, int layer)
         {
             Point currentNode = currentPath[currentPath.Count - 1];
-            Tile currentTile = tiles[currentNode.X, currentNode.Y, layer];            
+            Tile currentTile = Tiles[currentNode.X, currentNode.Y, layer];            
 
             if (pathlength > 0)
             {
-                if (currentTile.up == true && prevDirection != 1)
+                if (currentTile.Up == true && prevDirection != 1)
                 {
 
                     currentPath.Add(new Point(currentNode.X, currentNode.Y - 1));
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 0, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                if (currentTile.down == true && prevDirection != 0)
+                if (currentTile.Down == true && prevDirection != 0)
                 {
                     currentPath.Add(new Point(currentNode.X, currentNode.Y + 1));
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 1, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                if (currentTile.left == true && prevDirection != 3)
+                if (currentTile.Left == true && prevDirection != 3)
                 {
                     currentPath.Add(new Point(currentNode.X - 1, currentNode.Y));
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 2, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                if (currentTile.right == true && prevDirection != 2)
+                if (currentTile.Right == true && prevDirection != 2)
                 {
                     currentPath.Add(new Point(currentNode.X + 1, currentNode.Y));
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 3, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
                 }
-                else if (!(currentTile.up == true && prevDirection != 1) && !(currentTile.down == true && prevDirection != 0) && !(currentTile.left == true && prevDirection != 3))
+                else if (!(currentTile.Up == true && prevDirection != 1) && !(currentTile.Down == true && prevDirection != 0) && !(currentTile.Left == true && prevDirection != 3))
                 {
                     List<Point> newPath = new();
                     foreach (Point p in currentPath)
@@ -655,15 +653,15 @@ namespace MazeT
 
             
         }
-        public string DrawPath(List<Point> path)
-        {
-            string output = "";
-            foreach (Point p in path)
-            {
-                output += $"({p.X / 128},{p.Y /128}) ";
-            }
-            return output;
-        }
+        //public string DrawPath(List<Point> path)
+        //{
+        //    string output = "";
+        //    foreach (Point p in path)
+        //    {
+        //        output += $"({p.X / 128},{p.Y /128}) ";
+        //    }
+        //    return output;
+        //}
 
 
         public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
@@ -711,9 +709,9 @@ namespace MazeT
         /// <summary>
         /// This is a tester function that will display the rectangles.
         /// </summary>
-        public void displayRects(SpriteBatch spriteBatch, Texture2D rectColour)
+        public void DisplayRects(SpriteBatch spriteBatch, Texture2D rectColour)
         {
-            foreach (Rectangle rect in collisionRects[currentLayer])
+            foreach (Rectangle rect in collision_rects[current_layer])
             {
                 spriteBatch.Draw(rectColour, rect, Color.White);
             }

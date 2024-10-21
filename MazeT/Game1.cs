@@ -45,12 +45,12 @@ namespace MazeT
             // TODO: Add your initialization logic here
             previousState = Keyboard.GetState();            
             maze = new Maze(15, 15, 2);
-            player = new Player(44, 56, -27, -86, maze.collisionRects);
+            player = new Player(44, 56, -27, -86, maze.collision_rects);
             testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 8, 0);
 
             //Initialise enemy list
-            enemies = new List<CollisionCharacter>[maze.maxLayers];
-            for (int i = 0; i < maze.maxLayers; i++)
+            enemies = new List<CollisionCharacter>[maze.max_layers];
+            for (int i = 0; i < maze.max_layers; i++)
             {
                 enemies[i] = new List<CollisionCharacter>();
             }
@@ -65,9 +65,9 @@ namespace MazeT
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here            
-            maze.mazeWallH = Content.Load<Texture2D>("temp_wallH");
-            maze.mazeWallV = Content.Load<Texture2D>("temp_wallV");
-            maze.mazeFloor = Content.Load<Texture2D>("temp_floor");
+            maze.maze_wall_H = Content.Load<Texture2D>("temp_wallH");
+            maze.maze_wall_V = Content.Load<Texture2D>("temp_wallV");
+            maze.maze_floor = Content.Load<Texture2D>("temp_floor");
             maze.staircase = Content.Load<Texture2D>("temp_pad");
 
             wall = new Texture2D(GraphicsDevice, 1, 1);
@@ -112,18 +112,18 @@ namespace MazeT
                 testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
             }
             
-            player.Update(currentKeys, previousState, maze.pos, maze.currentLayer, gameTime.ElapsedGameTime.Milliseconds);  
-            foreach (var enemy in enemies[maze.currentLayer])
+            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);  
+            foreach (var enemy in enemies[maze.current_layer])
             {
-                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
+                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
             }
                       
             
-            foreach (var rect in maze.TP_Pads[maze.currentLayer])
+            foreach (var rect in maze.TP_Pads[maze.current_layer])
             {
                 if (player.collision_rect.Intersects(rect) && currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
                 {
-                    maze.currentLayer = (maze.currentLayer + 1) % maze.maxLayers;
+                    maze.current_layer = (maze.current_layer + 1) % maze.max_layers;
                 }
             }
             
@@ -158,14 +158,14 @@ namespace MazeT
 
             player.UpdateLocalPosition(maze.pos, 32, 32);
             player.UpdateRectanglePosition(maze.pos);
-            foreach (var enemy in enemies[maze.currentLayer])
+            foreach (var enemy in enemies[maze.current_layer])
             {
-                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
+                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
                 enemy.UpdateLocalPosition(maze.pos);
                 enemy.UpdateRectanglePosition(maze.pos);
             }
 
-            foreach (var enemy in enemies[maze.currentLayer])
+            foreach (var enemy in enemies[maze.current_layer])
             {
                 if (player.collision_rect.Intersects(enemy.collision_rect))
                 {
@@ -175,7 +175,6 @@ namespace MazeT
             }
 
             maze.UpdateMazeRects(prevMazePos - maze.pos);
-            test = maze.DrawPath(testpath);
 
             previousState = Keyboard.GetState();
             prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
@@ -190,17 +189,17 @@ namespace MazeT
             _spriteBatch.Begin();
             if (mazeTest)
             {
-                maze.displayMaze(_spriteBatch);
+                maze.DisplayMaze(_spriteBatch);
             }
             else{
-                maze.displayRects(_spriteBatch, wall);
+                maze.DisplayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
             _spriteBatch.DrawString(testFont, $"player HP: {player.health}", new Vector2(0, 700), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
             
             player.Display(_spriteBatch);            
-            foreach (var enemy in enemies[maze.currentLayer])
+            foreach (var enemy in enemies[maze.current_layer])
             {                
                 _spriteBatch.Draw(TPpad, enemy.collision_rect, Color.White);
                 enemy.Display(_spriteBatch);
