@@ -112,7 +112,7 @@ namespace MazeT
                 testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
             }
             
-            player.Update(currentKeys, previousState, maze.pos, maze.currentLayer, gameTime.ElapsedGameTime.TotalMilliseconds);  
+            player.Update(currentKeys, previousState, maze.pos, maze.currentLayer, gameTime.ElapsedGameTime.Milliseconds);  
             foreach (var enemy in enemies[maze.currentLayer])
             {
                 enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
@@ -129,13 +129,13 @@ namespace MazeT
             
             
             //Side scrolling code//
-            if (player.localPosition.X <= screen_width / 2 + 30 && player.localPosition.X >= screen_width / 2 - 30)
+            if (player.local_position.X <= screen_width / 2 + 30 && player.local_position.X >= screen_width / 2 - 30)
             {
-                maze.pos.X += player.globalPosition.X - player.old_global_position.X;
+                maze.pos.X += player.global_position.X - player.old_global_position.X;
             }
-            if (player.localPosition.Y <= screen_height / 2 + 30 && player.localPosition.Y >= screen_height / 2 - 30)
+            if (player.local_position.Y <= screen_height / 2 + 30 && player.local_position.Y >= screen_height / 2 - 30)
             {
-                maze.pos.Y += player.globalPosition.Y - player.old_global_position.Y;
+                maze.pos.Y += player.global_position.Y - player.old_global_position.Y;
             }
 
             if (maze.pos.X < 0)
@@ -157,17 +157,29 @@ namespace MazeT
             }
 
             player.UpdateLocalPosition(maze.pos, 32, 32);
+            player.UpdateRectanglePosition(maze.pos);
             foreach (var enemy in enemies[maze.currentLayer])
             {
                 enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.currentLayer);
                 enemy.UpdateLocalPosition(maze.pos);
+                enemy.UpdateRectanglePosition(maze.pos);
             }
+
+            foreach (var enemy in enemies[maze.currentLayer])
+            {
+                if (player.collision_rect.Intersects(enemy.collision_rect))
+                {
+                    //Do player getting hit code. Include stuff like iframes, game pauses, damage taken
+                    player.TakeDamage();
+                }
+            }
+
             maze.UpdateMazeRects(prevMazePos - maze.pos);
             test = maze.DrawPath(testpath);
 
             previousState = Keyboard.GetState();
             prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
-            player.old_global_position = player.globalPosition;
+            player.old_global_position = player.global_position;
             base.Update(gameTime);
         }
 
@@ -184,12 +196,13 @@ namespace MazeT
                 maze.displayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont, $"player_pos: {player.globalPosition}\n{test}", new Vector2(0, 700), Color.White);
-            maze.DrawPath(testpath, _spriteBatch,TPpad);
-            _spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
+            _spriteBatch.DrawString(testFont, $"player HP: {player.health}", new Vector2(0, 700), Color.White);
+            //maze.DrawPath(testpath, _spriteBatch,TPpad);
+            
             player.Display(_spriteBatch);            
             foreach (var enemy in enemies[maze.currentLayer])
-            {
+            {                
+                _spriteBatch.Draw(TPpad, enemy.collision_rect, Color.White);
                 enemy.Display(_spriteBatch);
             }
             _spriteBatch.End();

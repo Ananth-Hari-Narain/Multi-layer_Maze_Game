@@ -136,12 +136,15 @@ namespace MazeT
     {
         public Rectangle collision_rect;
         public Vector2 old_global_position;
+        public int health; //How much health the character has remaining
+        public int power; //How much damage a character deals
         //This is used as the floating point position of the enemies for smoother movement
         public Vector2 global_position;
         public Vector2 local_position; //Used for displaying
-        public Vector2 velocity;
+        protected Vector2 velocity;
         public static List<Rectangle>[] wall_rects;
         protected Vector2 coll_rect_offset;
+        
 
         /// <summary>
         /// This is the function that will handle collision with walls for all objects 
@@ -175,13 +178,17 @@ namespace MazeT
         public void UpdateLocalPosition(Vector2 mazePos, int offsetX = 0, int offsetY = 0)
         {
             local_position.X = (int)(global_position.X - mazePos.X + offsetX);
-            local_position.Y = (int)(global_position.Y - mazePos.Y + offsetY);
-            collision_rect.Location = (global_position - mazePos + coll_rect_offset).ToPoint();
+            local_position.Y = (int)(global_position.Y - mazePos.Y + offsetY);            
         }
 
         public void UpdateRectanglePosition(Vector2 mazePos)
         {
             collision_rect.Location = (global_position - mazePos + coll_rect_offset).ToPoint();
+        }
+
+        public virtual void TakeDamage(int damage_taken = 1)
+        {
+            
         }
 
         public virtual void Display(SpriteBatch spritebatch)
@@ -193,7 +200,8 @@ namespace MazeT
     internal class Player : CollisionCharacter
     {        
         public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
-        private double internal_timer = 0;
+        private int internal_anim_timer = 0;
+        private int internal_iframes_timer = 0;
         private FacingDirections direction = FacingDirections.NORTH;
         
         private enum PlayerState
@@ -215,6 +223,7 @@ namespace MazeT
         public Player(int width, int height, int x, int y, List<Rectangle>[] wall_rects)
         {
             CollisionCharacter.wall_rects = wall_rects;
+            health = 5;
             coll_rect_offset = new Vector2(75, 104);
             collision_rect = new Rectangle(x+75, y+104, width, height);
             global_position = new Vector2(x, y);
@@ -227,7 +236,7 @@ namespace MazeT
         }
         
 
-        public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, double time_elapsed)
+        public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, int time_elapsed)
         {
             int walkAnimationDelay = 200;
             int playerSpeed = 2;
@@ -246,12 +255,12 @@ namespace MazeT
                 if (player_state != PlayerState.WALKING)
                 {
                     player_state = PlayerState.WALKING;
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }                
-                if (internal_timer <= 0)
+                if (internal_anim_timer <= 0)
                 {
                     walk[(int) direction].UpdateAnimationFrame();
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
             }
             else if (current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
@@ -263,12 +272,12 @@ namespace MazeT
                 if (player_state != PlayerState.WALKING)
                 {
                     player_state = PlayerState.WALKING;
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
-                if (internal_timer <= 0)
+                if (internal_anim_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
             }
 
@@ -289,12 +298,12 @@ namespace MazeT
                 if (player_state != PlayerState.WALKING)
                 {
                     player_state = PlayerState.WALKING;
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
-                if (internal_timer <= 0)
+                if (internal_anim_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
             }
             else if (current_keys.IsKeyDown(Keys.Left) || current_keys.IsKeyDown(Keys.A))
@@ -306,12 +315,12 @@ namespace MazeT
                 if (player_state != PlayerState.WALKING)
                 {
                     player_state = PlayerState.WALKING;
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
-                if (internal_timer <= 0)
+                if (internal_anim_timer <= 0)
                 {
                     walk[(int)direction].UpdateAnimationFrame();
-                    internal_timer = walkAnimationDelay;
+                    internal_anim_timer = walkAnimationDelay;
                 }
             }
 
@@ -328,19 +337,43 @@ namespace MazeT
             }
            
             UpdateRectanglePosition(maze_pos);
-            internal_timer -= time_elapsed;
+            internal_anim_timer -= time_elapsed;
+            if (internal_iframes_timer > 0)
+            {
+                internal_iframes_timer -= time_elapsed;
+            }
         }
 
         public override void Display(SpriteBatch spriteBatch)
         {
-            if (player_state == PlayerState.WALKING)
+            //Display player every 50ms if they are invulnerable to create
+            //a blinking animation
+            if (internal_iframes_timer % 100 <= 50)
             {
-                walk[(int)direction].Display(spriteBatch, local_position);
+                if (player_state == PlayerState.WALKING)
+                {
+                    walk[(int)direction].Display(spriteBatch, local_position);
+                }
+                else if (player_state == PlayerState.IDLE)
+                {
+                    walk[(int)direction].Display(spriteBatch, local_position, 1);
+                }
             }            
-            else if (player_state == PlayerState.IDLE)
+        }
+
+        public override void TakeDamage(int damage_taken = 1)
+        {
+            //If the player is not invincible
+            if (internal_iframes_timer <= 0)
             {
-                walk[(int)direction].Display(spriteBatch, local_position, 1);
+                //Deal damage
+                health -= damage_taken;
+
+                //Activate invincibility frames
+                //2 seconds of invulnerability
+                internal_iframes_timer = 2000;
             }
+            
         }
     }
 
@@ -349,9 +382,7 @@ namespace MazeT
     /// which can be determined through a BFS.
     /// </summary>
     internal class BlindEnemy : CollisionCharacter
-    {
-        public int health;
-        public int power;
+    {        
         //The ogre can run left or right (but can move up or down)
         public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
         private int internal_anim_timer = 0; //Used for animation
@@ -372,12 +403,14 @@ namespace MazeT
             global_position = path[0].ToVector2();
             prev_target_index = 0;
             target_index = 1;
-
+            collision_rect.Width = 40;
+            collision_rect.Height = 30;
+            coll_rect_offset = new Vector2(10, 15);
             //Create animation frames
             run[0] = new AnimatedSpriteSheet(64, 56, 4, 0, 56); //left
             run[1] = new AnimatedSpriteSheet(64, 56, 4, 0, 0); //right
         }
-
+        
         public override void Update(long timeElapsedinMilliseconds, int mazeLayer)
         {
             const int walk_anim_delay = 310;
@@ -432,7 +465,7 @@ namespace MazeT
             
 
             //Update target position once reached (when you are within 5 units from the target)
-            if (Vector2.DistanceSquared(path[target_index].ToVector2(), global_position - coll_rect_offset) <= 25)
+            if (Vector2.DistanceSquared(path[target_index].ToVector2(), global_position) <= 25)
             {
                 if (target_index != path.Count - 1 && target_index != 0)
                 {
