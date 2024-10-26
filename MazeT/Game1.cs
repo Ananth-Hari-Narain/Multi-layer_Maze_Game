@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Mime;
 
@@ -15,7 +16,6 @@ namespace MazeT
         private const int screen_width = 800;
         private const int screen_height = 800;
         private bool mazeTest = true; //testing code
-        private string test = "";
         private Vector2 prevMazePos = new Vector2();       
 
         private Texture2D wall;
@@ -55,7 +55,7 @@ namespace MazeT
                 enemies[i] = new List<CollisionCharacter>();
             }
 
-            enemies[0].Add(new BlindEnemy(0, testpath));
+            enemies[0].Add(new BlindEnemy(2, testpath));
 
             base.Initialize();            
         }
@@ -95,7 +95,7 @@ namespace MazeT
                 Exit();
 
             KeyboardState currentKeys = Keyboard.GetState();
-            if (currentKeys.IsKeyDown(Keys.Space) && !previousState.IsKeyDown(Keys.Space))
+            if (currentKeys.IsKeyDown(Keys.P) && !previousState.IsKeyDown(Keys.P))
             {
                 mazeTest = !mazeTest;
             }
@@ -166,12 +166,20 @@ namespace MazeT
             }
 
             foreach (var enemy in enemies[maze.current_layer])
-            {
-                if (player.collision_rect.Intersects(enemy.collision_rect))
-                {
-                    //Do player getting hit code. Include stuff like iframes, game pauses, damage taken
-                    player.TakeDamage();
-                }
+            {        
+                if (enemy.health > 0)
+                {                    
+                    if (player.sword_hitbox.Intersects(enemy.collision_rect))
+                    {
+                        enemy.TakeDamage(player.power, player.sword_hitbox.Center);
+                    }
+                    //If the player succesfully hit the enemy, the player should not take damage
+                    // from that enemy
+                    else if (player.collision_rect.Intersects(enemy.collision_rect))
+                    {
+                        player.TakeDamage(enemy.power);
+                    }
+                }                
             }
 
             maze.UpdateMazeRects(prevMazePos - maze.pos);
@@ -195,14 +203,16 @@ namespace MazeT
                 maze.DisplayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont, $"player HP: {player.health}", new Vector2(0, 700), Color.White);
+            _spriteBatch.DrawString(testFont, $"sword location: {player.sword_hitbox.Location}", new Vector2(0, 700), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
-            
+            _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
             player.Display(_spriteBatch);            
             foreach (var enemy in enemies[maze.current_layer])
             {                
-                _spriteBatch.Draw(TPpad, enemy.collision_rect, Color.White);
-                enemy.Display(_spriteBatch);
+                if (enemy.health > 0)
+                {
+                    enemy.Display(_spriteBatch);
+                }                
             }
             _spriteBatch.End();
 

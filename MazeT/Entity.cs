@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 
 namespace MazeT
@@ -140,9 +141,9 @@ namespace MazeT
         public int power; //How much damage a character deals
         //This is used as the floating point position of the enemies for smoother movement
         public Vector2 global_position;
-        public Vector2 local_position; //Used for displaying
+        public Vector2 local_position; 
         protected Vector2 velocity;
-        public static List<Rectangle>[] wall_rects;
+        protected static List<Rectangle>[] wall_rects;
         protected Vector2 coll_rect_offset;
         
 
@@ -170,7 +171,7 @@ namespace MazeT
             }
         }
 
-        public virtual void Update(long timeElapsedinMilliseconds, int mazeLayer)
+        public virtual void Update(int timeElapsedinMilliseconds, int mazeLayer)
         {
 
         }        
@@ -186,7 +187,7 @@ namespace MazeT
             collision_rect.Location = (global_position - mazePos + coll_rect_offset).ToPoint();
         }
 
-        public virtual void TakeDamage(int damage_taken = 1)
+        public virtual void TakeDamage(int damage_taken, Point source_of_damage)
         {
             
         }
@@ -197,18 +198,16 @@ namespace MazeT
         }
     }
 
+    /// <summary>
+    /// This class is used to represent the character that is controlled by the user.
+    /// </summary>
     internal class Player : CollisionCharacter
-    {        
-        public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
-        private int internal_anim_timer = 0;
-        private int internal_iframes_timer = 0;
-        private FacingDirections direction = FacingDirections.NORTH;
-        
+    {
         private enum PlayerState
         {
             IDLE,
             WALKING,
-            ATTACK            
+            ATTACKING
         }
 
         private enum FacingDirections
@@ -219,11 +218,23 @@ namespace MazeT
             WEST = 3
         }
 
+        public AnimatedSpriteSheet[] walk = new AnimatedSpriteSheet[4];
+        private int internal_anim_timer = 0;
+        private int internal_iframes_timer = 0;
+
+        private int sword_range; //This will change depending on the sword the player wields
+        public Rectangle sword_hitbox;
+        private int sword_out_timer; //Records how long the sword has been out for
+        private int sword_cooldown_timer; //Records how long there is till the next sword can be used
+
+        private FacingDirections direction = FacingDirections.NORTH;
         private PlayerState player_state = PlayerState.IDLE;
         public Player(int width, int height, int x, int y, List<Rectangle>[] wall_rects)
         {
             CollisionCharacter.wall_rects = wall_rects;
             health = 5;
+            sword_range = 2;
+            power = 1;
             coll_rect_offset = new Vector2(75, 104);
             collision_rect = new Rectangle(x+75, y+104, width, height);
             global_position = new Vector2(x, y);
@@ -234,106 +245,216 @@ namespace MazeT
                 walk[i] = new AnimatedSpriteSheet(128, 128, 4, 0, 128 * i);
             }
         }
-        
 
         public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, int time_elapsed)
         {
             int walkAnimationDelay = 200;
             int playerSpeed = 2;
             bool directionKeyPressed = false;
-            if (current_keys.IsKeyDown(Keys.LeftShift) || current_keys.IsKeyDown(Keys.RightShift))
+
+            if (current_keys.IsKeyDown(Keys.Space) && sword_cooldown_timer <= 0)
             {
-                playerSpeed = 4;
-                walkAnimationDelay = 120;
+                player_state = PlayerState.ATTACKING;
+                sword_out_timer = 200;
+                sword_cooldown_timer = 300;
             }
-            if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W))
-            {
-                directionKeyPressed = true;
-                direction = FacingDirections.NORTH;
-                velocity.X = 0;
-                velocity.Y = -playerSpeed;
-                if (player_state != PlayerState.WALKING)
+
+            //If the player is not attacking, they can walk
+            if (player_state != PlayerState.ATTACKING)
+            {               
+                if (current_keys.IsKeyDown(Keys.LeftShift) || current_keys.IsKeyDown(Keys.RightShift))
                 {
-                    player_state = PlayerState.WALKING;
-                    internal_anim_timer = walkAnimationDelay;
-                }                
-                if (internal_anim_timer <= 0)
-                {
-                    walk[(int) direction].UpdateAnimationFrame();
-                    internal_anim_timer = walkAnimationDelay;
+                    playerSpeed = 4;
+                    walkAnimationDelay = 120;
                 }
-            }
-            else if (current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
-            {
-                directionKeyPressed = true;
-                direction = FacingDirections.SOUTH;
-                velocity.X = 0;
-                velocity.Y = playerSpeed;
-                if (player_state != PlayerState.WALKING)
+                if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W))
                 {
-                    player_state = PlayerState.WALKING;
-                    internal_anim_timer = walkAnimationDelay;
+                    directionKeyPressed = true;
+                    direction = FacingDirections.NORTH;
+                    velocity.X = 0;
+                    velocity.Y = -playerSpeed;
+                    if (player_state != PlayerState.WALKING)
+                    {
+                        player_state = PlayerState.WALKING;
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                    if (internal_anim_timer <= 0)
+                    {
+                        walk[(int)direction].UpdateAnimationFrame();
+                        internal_anim_timer = walkAnimationDelay;
+                    }
                 }
-                if (internal_anim_timer <= 0)
+                else if (current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
                 {
-                    walk[(int)direction].UpdateAnimationFrame();
-                    internal_anim_timer = walkAnimationDelay;
+                    directionKeyPressed = true;
+                    direction = FacingDirections.SOUTH;
+                    velocity.X = 0;
+                    velocity.Y = playerSpeed;
+                    if (player_state != PlayerState.WALKING)
+                    {
+                        player_state = PlayerState.WALKING;
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                    if (internal_anim_timer <= 0)
+                    {
+                        walk[(int)direction].UpdateAnimationFrame();
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                }
+
+                collision_rect.Offset(0, velocity.Y);
+                global_position.Y += velocity.Y;
+                HandleWallCollision(maze_layer, false);
+
+                if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W) || current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
+                {
+                    //pass
+                }
+                else if (current_keys.IsKeyDown(Keys.Right) || current_keys.IsKeyDown(Keys.D))
+                {
+                    directionKeyPressed = true;
+                    direction = FacingDirections.EAST;
+                    velocity.Y = 0;
+                    velocity.X = playerSpeed;
+                    if (player_state != PlayerState.WALKING)
+                    {
+                        player_state = PlayerState.WALKING;
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                    if (internal_anim_timer <= 0)
+                    {
+                        walk[(int)direction].UpdateAnimationFrame();
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                }
+                else if (current_keys.IsKeyDown(Keys.Left) || current_keys.IsKeyDown(Keys.A))
+                {
+                    directionKeyPressed = true;
+                    direction = FacingDirections.WEST;
+                    velocity.Y = 0;
+                    velocity.X = -playerSpeed;
+                    if (player_state != PlayerState.WALKING)
+                    {
+                        player_state = PlayerState.WALKING;
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                    if (internal_anim_timer <= 0)
+                    {
+                        walk[(int)direction].UpdateAnimationFrame();
+                        internal_anim_timer = walkAnimationDelay;
+                    }
+                }
+
+                collision_rect.Offset(velocity.X, 0);
+                global_position.X += velocity.X;
+                HandleWallCollision(maze_layer, true);
+
+                if (!directionKeyPressed)
+                {
+                    velocity.X = 0;
+                    velocity.Y = 0;
+                    player_state = PlayerState.IDLE;
+                    walk[(int)direction].ResetAnimation();
+                }
+
+                //Lower sword cooldown timer
+                if (sword_cooldown_timer > 0)
+                {
+                    sword_cooldown_timer -= time_elapsed;
                 }
             }
 
-            collision_rect.Offset(0, velocity.Y);
-            global_position.Y += velocity.Y;
-            HandleWallCollision(maze_layer, false);
+            //The player will slide to a halt if they attack
+            else
+            {
+                //Let the player slide to a halt.
+                if (velocity.X > 0)
+                {
+                    velocity.X -= 0.3f;
+                    if (velocity.X < 0)
+                    {
+                        velocity.X = 0;
+                    }
+                }
+                else if (velocity.X < 0)
+                {
+                    velocity.X += 0.3f;
+                    if (velocity.X > 0)
+                    {
+                        velocity.X = 0;
+                    }
+                }
 
-            if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W) || current_keys.IsKeyDown(Keys.Down) || current_keys.IsKeyDown(Keys.S))
-            {
-                //pass
-            }
-            else if (current_keys.IsKeyDown(Keys.Right) || current_keys.IsKeyDown(Keys.D))
-            {
-                directionKeyPressed = true;
-                direction = FacingDirections.EAST;
-                velocity.Y = 0;
-                velocity.X = playerSpeed;
-                if (player_state != PlayerState.WALKING)
-                {
-                    player_state = PlayerState.WALKING;
-                    internal_anim_timer = walkAnimationDelay;
-                }
-                if (internal_anim_timer <= 0)
-                {
-                    walk[(int)direction].UpdateAnimationFrame();
-                    internal_anim_timer = walkAnimationDelay;
-                }
-            }
-            else if (current_keys.IsKeyDown(Keys.Left) || current_keys.IsKeyDown(Keys.A))
-            {
-                directionKeyPressed = true;
-                direction = FacingDirections.WEST;
-                velocity.Y = 0;
-                velocity.X = -playerSpeed;
-                if (player_state != PlayerState.WALKING)
-                {
-                    player_state = PlayerState.WALKING;
-                    internal_anim_timer = walkAnimationDelay;
-                }
-                if (internal_anim_timer <= 0)
-                {
-                    walk[(int)direction].UpdateAnimationFrame();
-                    internal_anim_timer = walkAnimationDelay;
-                }
-            }
+                collision_rect.Offset(velocity.X, 0);
+                global_position.X += velocity.X;
+                HandleWallCollision(maze_layer, true);
 
-            collision_rect.Offset(velocity.X, 0);
-            global_position.X += velocity.X;
-            HandleWallCollision(maze_layer, true);
+                if (velocity.Y > 0)
+                {
+                    velocity.Y -= 0.3f;
+                    if (velocity.Y < 0)
+                    {
+                        velocity.Y = 0;
+                    }
+                }
+                else if (velocity.Y < 0)
+                {
+                    velocity.Y += 0.3f;
+                    if (velocity.Y > 0)
+                    {
+                        velocity.Y = 0;
+                    }
+                }
 
-            if (!directionKeyPressed)
-            {
-                velocity.X = 0;
-                velocity.Y = 0;
-                player_state = PlayerState.IDLE;
-                walk[(int) direction].ResetAnimation();
+                collision_rect.Offset(0, velocity.Y);
+                global_position.Y += velocity.Y;
+                HandleWallCollision(maze_layer, false);
+
+                //Calculate sword's dimensions. This will depend on which
+                //way the player is facing 
+                if (direction == FacingDirections.NORTH || direction == FacingDirections.SOUTH)
+                {
+                    sword_hitbox.Height = sword_range * 20;
+                    sword_hitbox.Width = 60;
+                }
+                else
+                {
+                    sword_hitbox.Height = 60;
+                    sword_hitbox.Width = sword_range * 20;
+                }
+
+                //Position sword in front of player
+                //Since the x and y positions of the sword's hitbox refer to the
+                //topleft, need to adjust sword position accordingly
+                if (direction == FacingDirections.NORTH)
+                {
+                    sword_hitbox.X = collision_rect.Center.X - (sword_hitbox.Width/2);
+                    sword_hitbox.Y = collision_rect.Top - sword_hitbox.Height;
+                }
+                else if (direction == FacingDirections.EAST)
+                {
+                    sword_hitbox.X = collision_rect.Right;
+                    sword_hitbox.Y = collision_rect.Center.Y - (sword_hitbox.Height/2);
+                }
+                else if (direction == FacingDirections.SOUTH)
+                {
+                    sword_hitbox.X = collision_rect.Center.X - (sword_hitbox.Width / 2);
+                    sword_hitbox.Y = collision_rect.Bottom;
+                }
+                else
+                {
+                    sword_hitbox.X = collision_rect.Left - sword_hitbox.Width;
+                    sword_hitbox.Y = collision_rect.Center.Y - (sword_hitbox.Height / 2);
+                }
+
+                sword_out_timer -= time_elapsed;
+                if (sword_out_timer <= 0)
+                {
+                    player_state = PlayerState.IDLE;
+                    //Move the sword offscreen so that it can't affect enemies
+                    sword_hitbox.Location = new(-100, -100);
+                }
+
             }
            
             UpdateRectanglePosition(maze_pos);
@@ -346,22 +467,28 @@ namespace MazeT
 
         public override void Display(SpriteBatch spriteBatch)
         {
-            //Display player every 50ms if they are invulnerable to create
+            //Display sword
+            if (player_state == PlayerState.ATTACKING)
+            {
+                //Display sword code
+            }
+            //Display player every 100ms if they are invulnerable to create
             //a blinking animation
-            if (internal_iframes_timer % 100 <= 50)
+            if (internal_iframes_timer % 200 <= 100)
             {
                 if (player_state == PlayerState.WALKING)
                 {
                     walk[(int)direction].Display(spriteBatch, local_position);
                 }
-                else if (player_state == PlayerState.IDLE)
+                //TEMPORARY: WILL ADD ATTACKING ANIMATION EVENTUALLY
+                else if (player_state == PlayerState.IDLE || player_state == PlayerState.ATTACKING)
                 {
                     walk[(int)direction].Display(spriteBatch, local_position, 1);
                 }
             }            
         }
 
-        public override void TakeDamage(int damage_taken = 1)
+        public void TakeDamage(int damage_taken = 1)
         {
             //If the player is not invincible
             if (internal_iframes_timer <= 0)
@@ -390,11 +517,12 @@ namespace MazeT
         private int target_index;
         private int prev_target_index;
         private bool is_facing_left = true;
+        private int being_hit_timer = 0;
 
         public BlindEnemy(int currentLevel, List<Point> path)
         {
             //Subject to change
-            health = currentLevel;
+            health = 90;
             power = currentLevel;
             run.Initialize();
             //Path should be determined in the main game loop to help
@@ -411,41 +539,57 @@ namespace MazeT
             run[1] = new AnimatedSpriteSheet(64, 56, 4, 0, 0); //right
         }
         
-        public override void Update(long timeElapsedinMilliseconds, int mazeLayer)
+        public override void Update(int time_elapsed, int mazeLayer)
         {
             const int walk_anim_delay = 310;
             //If enemy is not being attacked (in which case they are pushed back slightly)
-            if (true)
+            if (being_hit_timer <= 0)
             {
                 //Determine a velocity based on enemy's centre's position and target position                
                 velocity = path[target_index].ToVector2() - global_position;
                 //make sure magnitude of velocity = set speed (divide velocity by magnitude)
                 velocity = velocity * 1 / velocity.Length();
-                
+
+                //Update X coords but ignore collision
+                //(prevents enemy getting stuck in the wall)
+                collision_rect.Offset(0, velocity.X);
+                global_position.X += velocity.X;
+
+                //Update Y coords and do same thing
+                collision_rect.Offset(0, velocity.Y);
+                global_position.Y += velocity.Y;
+
             }
+            //If the enemy has been hit recently
             else
             {
-                //Deal with enemy getting damaged
-            }
+                //Reduce the speed exponentially.
+                velocity /= 1.05f;
+                being_hit_timer -= time_elapsed;
 
+                //Update X coords and do collision handling function
+                collision_rect.Offset(0, velocity.X);
+                global_position.X += velocity.X;
+                HandleWallCollision(mazeLayer, true);
 
-            //Update X coords and do collision handling function
-            collision_rect.Offset(0, velocity.X);
-            global_position.X += velocity.X;
+                //Update Y coords and do same thing
+                collision_rect.Offset(0, velocity.Y);
+                global_position.Y += velocity.Y;
+                HandleWallCollision(mazeLayer, false);
+            }           
 
-            //Update Y coords and do same thing
-            collision_rect.Offset(0, velocity.Y);
-            global_position.Y += velocity.Y;
-
-            //Decide facing direction
-            if (velocity.X < 0)
+            //Decide facing direction only if the enemy is not being hit
+            if (being_hit_timer <= 0)
             {
-                is_facing_left = true;
-            }
-            else if (velocity.X > 0)
-            {
-                is_facing_left = false;
-            }
+                if (velocity.X < 0)
+                {
+                    is_facing_left = true;
+                }
+                else if (velocity.X > 0)
+                {
+                    is_facing_left = false;
+                }
+            }            
 
             //Update animation frame
             if (internal_anim_timer <= 0)
@@ -461,7 +605,7 @@ namespace MazeT
                 internal_anim_timer = walk_anim_delay;
 
             }
-            internal_anim_timer -= (int) timeElapsedinMilliseconds;
+            internal_anim_timer -= time_elapsed;
             
 
             //Update target position once reached (when you are within 5 units from the target)
@@ -497,6 +641,22 @@ namespace MazeT
                     target_index--;
                 }
             }
+        }
+
+        public override void TakeDamage(int damage_taken, Point source_of_damage)
+        {
+            if (being_hit_timer <= 0)
+            {
+                health -= damage_taken;
+                being_hit_timer = 500; //Enemy will be stunned for 500ms
+
+                //Decide which way to push enemy back
+                //This is calculated by finding the vector between the centres,
+                // and finding a vector in the same direction of magnitude 4.
+                velocity = (collision_rect.Center - source_of_damage).ToVector2();
+                velocity = velocity * 4 / velocity.Length();               
+            }  
+            
         }
 
         public override void Display(SpriteBatch spritebatch)
