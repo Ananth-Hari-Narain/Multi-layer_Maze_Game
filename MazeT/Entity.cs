@@ -135,8 +135,7 @@ namespace MazeT
     /// </summary>
     internal class CollisionCharacter
     {
-        public Rectangle collision_rect;
-        public Vector2 old_global_position;
+        public Rectangle collision_rect;        
         public int health; //How much health the character has remaining
         public int power; //How much damage a character deals
         //This is used as the floating point position of the enemies for smoother movement
@@ -145,7 +144,6 @@ namespace MazeT
         protected Vector2 velocity;
         protected static List<Rectangle>[] wall_rects;
         protected Vector2 coll_rect_offset;
-        
 
         /// <summary>
         /// This is the function that will handle collision with walls for all objects 
@@ -174,7 +172,12 @@ namespace MazeT
         public virtual void Update(int timeElapsedinMilliseconds, int mazeLayer)
         {
 
-        }        
+        }
+
+        public virtual void Update(int timeElapsedinMilliseconds, int mazeLayer, Vector2 player_pos)
+        {
+
+        }
 
         public void UpdateLocalPosition(Vector2 mazePos, int offsetX = 0, int offsetY = 0)
         {
@@ -226,6 +229,8 @@ namespace MazeT
         public Rectangle sword_hitbox;
         private int sword_out_timer; //Records how long the sword has been out for
         private int sword_cooldown_timer; //Records how long there is till the next sword can be used
+
+        public Vector2 old_global_position; //This is used for the side scrolling code
 
         private FacingDirections direction = FacingDirections.NORTH;
         private PlayerState player_state = PlayerState.IDLE;
@@ -510,7 +515,7 @@ namespace MazeT
     /// </summary>
     internal class BlindEnemy : CollisionCharacter
     {        
-        //The ogre can run left or right (but can move up or down)
+        //The blind enemy can run left or right (but can move up or down)
         public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
         private int internal_anim_timer = 0; //Used for animation
         public List<Point> path;
@@ -519,13 +524,13 @@ namespace MazeT
         private bool is_facing_left = true;
         private int being_hit_timer = 0;
 
-        public BlindEnemy(int currentLevel, List<Point> path)
+        public BlindEnemy(int current_level, List<Point> path)
         {
             //Subject to change
             health = 90;
-            power = currentLevel;
+            power = current_level;
             run.Initialize();
-            //Path should be determined in the main game loop to help
+            //Path should be determined in the Game1.cs to help
             //avoid conflicting paths
             this.path = path;
             global_position = path[0].ToVector2();
@@ -539,7 +544,7 @@ namespace MazeT
             run[1] = new AnimatedSpriteSheet(64, 56, 4, 0, 0); //right
         }
         
-        public override void Update(int time_elapsed, int mazeLayer)
+        public override void Update(int time_elapsed, int maze_layer)
         {
             const int walk_anim_delay = 310;
             //If enemy is not being attacked (in which case they are pushed back slightly)
@@ -552,7 +557,7 @@ namespace MazeT
 
                 //Update X coords but ignore collision
                 //(prevents enemy getting stuck in the wall)
-                collision_rect.Offset(0, velocity.X);
+                collision_rect.Offset(velocity.X, 0);
                 global_position.X += velocity.X;
 
                 //Update Y coords and do same thing
@@ -570,12 +575,12 @@ namespace MazeT
                 //Update X coords and do collision handling function
                 collision_rect.Offset(0, velocity.X);
                 global_position.X += velocity.X;
-                HandleWallCollision(mazeLayer, true);
+                HandleWallCollision(maze_layer, true);
 
                 //Update Y coords and do same thing
                 collision_rect.Offset(0, velocity.Y);
                 global_position.Y += velocity.Y;
-                HandleWallCollision(mazeLayer, false);
+                HandleWallCollision(maze_layer, false);
             }           
 
             //Decide facing direction only if the enemy is not being hit
@@ -672,5 +677,100 @@ namespace MazeT
         }
     }
 
+    /// <summary>
+    /// This enemy will simply follow the player around the map once they have sighted the 
+    /// player. It will require a path finding algorithm.
+    /// </summary>
+    internal class SmartEnemy: CollisionCharacter
+    {
+        public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
+        private int internal_anim_timer = 0; //Used for animation
+        private int being_hit_timer = 0;
+        private bool is_targetting_player = false;
+        private Vector2 destination;
+        private static Maze maze_copy; //This is needed for the path finding algorithm
+
+        public SmartEnemy(int current_level, Vector2 initial_position, ref Maze maze)
+        {
+            health = 5;
+            power = 2;
+            global_position = initial_position;
+            destination = new(-2, -2);
+            collision_rect.Width = 40;
+            collision_rect.Height = 30;
+            maze_copy = maze;
+            coll_rect_offset = new(100, 128);
+        }
+
+        public override void Update(int time_elapsed, int maze_layer, Vector2 player_pos)
+        {
+            //Determine whether the player is in enemy's vicinity (128 pixel radius)
+            //only if the enemy is not targetting the player currently.
+            if ((player_pos-global_position).LengthSquared() < 16384 && !is_targetting_player)
+            {
+                is_targetting_player = true;
+                //Maybe do enraged animation or an exclamation icon
+            }
+
+            if (is_targetting_player)
+            {
+
+                //Use path finding algorithm to get onto the same tile as the player, then hone
+                //in on the player
+
+                //The top corner of the player is not quite (0,0), so there is a bit of an offset.
+                //Hence we add the vector (98, 80) to the player's position and then divide it.
+                Point player_tile = new((int)(player_pos.X + 98) / 128, (int)(player_pos.Y + 80) / 128);
+                Point enemy_tile = new((int)global_position.X / 128, (int)global_position.Y / 128);
+
+                //If the player and enemy are on the same tile, the enemy can walk directly towards the player
+                if (true)
+                {
+                    velocity = player_pos - global_position;
+                    velocity = velocity * 6 / velocity.Length(); //speed of 6
+                }
+
+                //The enemy
+                else
+                {
+                    //Only choose a new destination once the enemy has reached its previously assigned destination
+                    //or if a destination has not been assigned yet.
+                    destination = maze_copy.SingleLayerNextTileFinder(enemy_tile, player_tile).ToVector2();                    
+
+                    if (float.IsNaN((destination - global_position).LengthSquared()))
+                    {
+                        throw new("WHAT???");
+                    }
+                        
+                    if (!(destination.X == -1 && destination.Y == -1))
+                    {
+                        //Convert maze indices to global coordinates of the centres of these tiles
+                        destination.X = destination.X * 128 + 64 - collision_rect.Width/2;
+                        destination.Y = destination.Y * 128 + 64 + collision_rect.Height/2;
+
+                        velocity = destination - global_position;
+                        velocity = velocity * 4 / velocity.Length(); //Speed of 4      
+                    }
+                    //If the enemy cannot path find to the player, make it stop attacking the player.
+                    else
+                    {
+                        is_targetting_player = false;
+                    }            
+                }
+
+                //Update X coords and do collision handling function
+                collision_rect.Offset(velocity.X, 0);
+                global_position.X += velocity.X;
+                //HandleWallCollision(maze_layer, true);
+
+                //Update Y coords and do same thing
+                collision_rect.Offset(0, velocity.Y);
+                global_position.Y += velocity.Y;
+                //HandleWallCollision(maze_layer, false);
+
+                //Do animation stuff
+            }
+        }
+    }
 }
 

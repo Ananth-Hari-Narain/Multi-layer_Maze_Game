@@ -25,13 +25,15 @@ namespace MazeT
         private Player player;
         private SpriteFont testFont;
         private List<Point> testpath;
+        private Point test_point = new(0, 0);
+        private Point final_test_point = new(3, 4);
 
         private KeyboardState previousState;
         public Game1()
         {            
             _graphics = new GraphicsDeviceManager(this);
-            _graphics.PreferredBackBufferWidth = screen_width; // Set your desired maze.width
-            _graphics.PreferredBackBufferHeight = screen_height; // Set your desired maze.height
+            _graphics.PreferredBackBufferWidth = screen_width; 
+            _graphics.PreferredBackBufferHeight = screen_height;
             _graphics.ApplyChanges();
             this.IsFixedTimeStep = true;
             
@@ -56,7 +58,7 @@ namespace MazeT
             }
 
             enemies[0].Add(new BlindEnemy(2, testpath));
-
+            enemies[0].Add(new SmartEnemy(2, new Vector2(170, 170), ref maze));            
             base.Initialize();            
         }
 
@@ -99,6 +101,11 @@ namespace MazeT
             {
                 mazeTest = !mazeTest;
             }
+            if (currentKeys.IsKeyDown(Keys.L) && !previousState.IsKeyDown(Keys.L))
+            {
+                test_point = maze.SingleLayerNextTileFinder(test_point, final_test_point);
+            }
+            
             if (currentKeys.IsKeyDown(Keys.M))
             {
                 this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 2d);
@@ -111,12 +118,12 @@ namespace MazeT
             {
                 testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
             }
+
+            test_point.X = (int)(player.global_position.X + 98) / 128;
+            test_point.Y = (int)(player.global_position.Y + 80) / 128;
             
-            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);  
-            foreach (var enemy in enemies[maze.current_layer])
-            {
-                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
-            }
+            
+            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);            
                       
             
             foreach (var rect in maze.TP_Pads[maze.current_layer])
@@ -159,16 +166,20 @@ namespace MazeT
             player.UpdateLocalPosition(maze.pos, 32, 32);
             player.UpdateRectanglePosition(maze.pos);
             foreach (var enemy in enemies[maze.current_layer])
-            {
-                enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
-                enemy.UpdateLocalPosition(maze.pos);
-                enemy.UpdateRectanglePosition(maze.pos);
-            }
-
-            foreach (var enemy in enemies[maze.current_layer])
-            {        
+            {       
                 if (enemy.health > 0)
-                {                    
+                {
+                    if (enemy.GetType() == typeof(SmartEnemy))
+                    {
+                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer, player.global_position);
+                    }
+                    else
+                    {
+                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
+                    }                    
+                    enemy.UpdateLocalPosition(maze.pos);
+                    enemy.UpdateRectanglePosition(maze.pos);
+
                     if (player.sword_hitbox.Intersects(enemy.collision_rect))
                     {
                         enemy.TakeDamage(player.power, player.sword_hitbox.Center);
@@ -179,7 +190,7 @@ namespace MazeT
                     {
                         player.TakeDamage(enemy.power);
                     }
-                }                
+                }
             }
 
             maze.UpdateMazeRects(prevMazePos - maze.pos);
@@ -203,14 +214,21 @@ namespace MazeT
                 maze.DisplayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont, $"sword location: {player.sword_hitbox.Location}", new Vector2(0, 700), Color.White);
+            _spriteBatch.DrawString(testFont,
+                $"\nplayer tile: ({(int)(player.global_position.X + 98) / 128},{(int)(player.global_position.Y + 80) / 128})" +
+                $"\nenemy tile: {new Point((int)enemies[0][1].global_position.X / 128, (int)enemies[0][1].global_position.Y / 128)}" +
+                $"\nplayer pos: {player.global_position}" +
+                $"\nenemy local_pos: {enemies[0][1].local_position}" +
+                $"\nenemy rect_pos: {enemies[0][1].collision_rect.Location}",
+                new Vector2(0, 600), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
             _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
             player.Display(_spriteBatch);            
             foreach (var enemy in enemies[maze.current_layer])
             {                
                 if (enemy.health > 0)
-                {
+                {                    
+                    _spriteBatch.Draw(TPpad, enemy.collision_rect, Color.White);
                     enemy.Display(_spriteBatch);
                 }                
             }

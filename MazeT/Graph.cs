@@ -97,14 +97,9 @@ namespace MazeT
         public readonly int tileSize = 128;
 
         /// <summary>
-        /// Size in pixels
-        /// </summary>
-        public readonly int mazeWallWidth = 16;
-
-        /// <summary>
         /// Global poisition of top left corner of maze
         /// </summary>
-        public Vector2 pos = new Vector2(0, 0);
+        public Vector2 pos = Vector2.Zero;
         public int xmax, ymax;
 
         /// <summary>
@@ -435,38 +430,40 @@ namespace MazeT
         
 
         public void DisplayMaze(SpriteBatch spriteBatch)
-        {
-            //Rename "offset variables"
-            const int offsetY = 128;
-            const int offsetX = 128;
-            const int tileW = 64;
-            const int wallVWidth = 32;
+        { 
+            //Each tile is a 128x128 area
+            const int tile_size_x = 128; 
+            const int tile_size_y = 128;
+            //Each tile is made up of four 64x64 tile segments
+            const int tile_segment_width = 64;
+            //This is the width of walls that are vertical
+            const int wallV_width = 32;
 
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {                    
-                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                    spriteBatch.Draw(maze_floor, new Vector2(x * offsetX + tileW - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + 2 * tile_segment_width - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * tile_size_y + tile_segment_width - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
+                    spriteBatch.Draw(maze_floor, new Vector2(x * tile_size_y + tile_segment_width - pos.X, y * tile_size_x + 2 * tile_segment_width - pos.Y), Color.White);
                     
                     if (_tiles[x, y, current_layer].Above || _tiles[x, y, current_layer].Below)
                     {
-                        spriteBatch.Draw(staircase, new Vector2(x * offsetX - pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(staircase, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
                     }
 
                     //If we are at the top
                     if (y == 0)
                     {
-                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX - pos.X, -pos.Y), Color.White);
-                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX + tileW - pos.X, -pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * tile_size_y - pos.X, -pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * tile_size_y + tile_segment_width - pos.X, -pos.Y), Color.White);
                     }
 
                     if (_tiles[x, y, current_layer].Down == false)
                     {
-                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(maze_wall_H, new Vector2(x * offsetX + tileW - pos.X, (y + 1) * offsetY - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * tile_size_y - pos.X, (y + 1) * tile_size_x - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_H, new Vector2(x * tile_size_y + tile_segment_width - pos.X, (y + 1) * tile_size_x - pos.Y), Color.White);
                     }
                 }
             }
@@ -478,37 +475,40 @@ namespace MazeT
                     //Display right walls (if applicable)  
                     if (!_tiles[x, y, current_layer].Right)
                     {
-                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + tileW - pos.Y), Color.White);
-                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * offsetX - wallVWidth - pos.X, y * offsetY + 2 * tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * tile_size_y - wallV_width - pos.X, y * tile_size_x - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * tile_size_y - wallV_width - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2((x + 1) * tile_size_y - wallV_width - pos.X, y * tile_size_x + 2 * tile_segment_width - pos.Y), Color.White);
                     }                   
 
                     //If we are on the leftmost side of the maze
                     if (x == 0)
                     {
-                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * offsetY - pos.Y), Color.White);
-                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * offsetY + tileW - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * tile_size_x - pos.Y), Color.White);
+                        spriteBatch.Draw(maze_wall_V, new Vector2(-pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
                     }
                 }
             }
         }
 
         /// <summary>
-        /// This function is used to create the list of collision rectangles
+        /// This function is used to create the list of collision rectangles. The rectangles should be in 
+        /// the same place as the walls that they represent. Hence this function is very similar to the
+        /// display function.
         /// </summary>
         public void SetMazeRectangles()
         {
             //These constants help to form the dimensions of the maze
-            const int offsetY = 128;
-            const int offsetX = 128;
-            const int tileW = 64;
-            const int wallVWidth = 32;
+            //They are the same as the constants in the display function
+            const int tile_width_y = 128;
+            const int tile_width_x = 128;
+            const int tile_segment_width = 64;
+            const int wallV_width = 32;
 
             //Generate the top and left hand-side rectangles
             for (int z = 0; z < max_layers; z++)
             {
-                collision_rects[z].Add(new Rectangle(0, 0, (width - 1) * offsetX + tileW * 2, 20));
-                collision_rects[z].Add(new Rectangle(0, 0, wallVWidth, (height - 1) * offsetY + tileW * 2));
+                collision_rects[z].Add(new Rectangle(0, 0, (width - 1) * tile_width_x + tile_segment_width * 2, 20));
+                collision_rects[z].Add(new Rectangle(0, 0, wallV_width, (height - 1) * tile_width_y + tile_segment_width * 2));
             }            
 
             for (int x = 0; x < width; x++)
@@ -521,9 +521,9 @@ namespace MazeT
                         if (_tiles[x, y, z].Down == false)
                         {
                             collision_rects[z].Add(new Rectangle(
-                                x * offsetX,
-                                (y + 1) * offsetY, 
-                                tileW * 2, 
+                                x * tile_width_x,
+                                (y + 1) * tile_width_y, 
+                                tile_segment_width * 2, 
                                 20
                                 ));
                         }     
@@ -532,10 +532,10 @@ namespace MazeT
                         if (_tiles[x, y, z].Right == false)
                         {
                             collision_rects[z].Add(new Rectangle(
-                                (x + 1) * offsetX - wallVWidth,
-                                y * offsetY, 
-                                wallVWidth, 
-                                tileW * 3 - 44
+                                (x + 1) * tile_width_x - wallV_width,
+                                y * tile_width_y, 
+                                wallV_width, 
+                                tile_segment_width * 3 - 44
                                 ));
                         }
 
@@ -578,7 +578,9 @@ namespace MazeT
             }
         }        
         
-
+        //This function will return one random path that starts at a specified point.
+        //It will try and ensure the path is as long as specified, but it will choose the next
+        //longest path if it cannot find it.
         public List<Point> GenerateSingleLayerPath(Point start, int pathlength, int layer)
         {
             List<List<Point>> all_paths = new();
@@ -663,6 +665,113 @@ namespace MazeT
         //    return output;
         //}
 
+        //Calculate shortest path between two points on the maze and return the next point in the path.
+        //Note that these points are NOT coordinates on the screen
+        //but they are indices for the maze array instead.This function will use a
+        //BFS as the maze is an unweighted graph.This function will not
+        //traverse between layers (good for enemies).
+        public Point SingleLayerNextTileFinder(Point start, Point end)
+        {
+            //Since we only need to return the next tile to go to,
+            //all paths just need to store the 2nd tile in the path
+            //where the 1st tile is the starting tile.
+            Queue<Point> tiles_to_visit = new();
+            //This simply stores which is the next tile we need to go to
+            //Since we know this tile
+            Queue<int> return_value = new();
+            HashSet<Point> visited = new() { start };
+
+            //Add all neighbouring tiles to the queue
+            if (_tiles[start.X, start.Y, current_layer].Up)
+            {
+                tiles_to_visit.Enqueue(new(start.X, start.Y - 1));
+                return_value.Enqueue(0);
+            }
+            if (_tiles[start.X, start.Y, current_layer].Down)
+            {
+                tiles_to_visit.Enqueue(new(start.X, start.Y + 1));
+                return_value.Enqueue(1);
+            }
+            if (_tiles[start.X, start.Y, current_layer].Left)
+            {
+                tiles_to_visit.Enqueue(new(start.X - 1, start.Y));
+                return_value.Enqueue(2);
+            }
+            if (_tiles[start.X, start.Y, current_layer].Right)
+            {
+                tiles_to_visit.Enqueue(new(start.X + 1, start.Y));
+                return_value.Enqueue(3);
+            }
+            Point current_tile;
+            int current_result; 
+            //Begin the algorithm
+            //While the tiles_to_visit queue is not empty
+            while (tiles_to_visit.Count > 0)
+            {
+                current_tile = tiles_to_visit.Dequeue();
+                current_result = return_value.Dequeue();
+                //If we reach the end, we have found the shortest path
+                if (current_tile == end)
+                {
+                    if (current_result == 0)
+                    {
+                        start.Y -= 1;
+                        return start;
+                    }
+                    else if (current_result == 1)
+                    {
+                        start.Y += 1;
+                        return start;
+                    }
+                    else if (current_result == 2)
+                    {
+                        start.X -= 1;
+                        return start;
+                    }
+                    else
+                    {
+                        start.X += 1;
+                        return start;
+                    }
+                }
+                else
+                {
+                    //Mark current tile as visited
+                    visited.Add(current_tile);
+
+                    //Add all neighbours to the "to visit" queue if they are not visited
+                    if (!visited.Contains(new(current_tile.X, current_tile.Y - 1)) 
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Up)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X, current_tile.Y - 1));
+                        return_value.Enqueue(current_result);
+                    }
+                    if (!visited.Contains(new(current_tile.X, current_tile.Y + 1)) &&
+                        _tiles[current_tile.X, current_tile.Y, current_layer].Down)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X, current_tile.Y + 1));
+                        return_value.Enqueue(current_result);
+                    }
+                    if (!visited.Contains(new(current_tile.X - 1, current_tile.Y))
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Left)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X - 1, current_tile.Y));
+                        return_value.Enqueue(current_result);
+                    }
+                    if (!visited.Contains(new(current_tile.X + 1, current_tile.Y))
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Right)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X + 1, current_tile.Y));
+                        return_value.Enqueue(current_result);
+                    }
+                }
+                
+            }
+
+            return new(-1, -1); //If cannot find a path
+        }
+
+        
 
         public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
         {
