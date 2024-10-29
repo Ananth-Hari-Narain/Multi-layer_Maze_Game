@@ -47,7 +47,7 @@ namespace MazeT
             // TODO: Add your initialization logic here
             previousState = Keyboard.GetState();            
             maze = new Maze(15, 15, 2);
-            player = new Player(44, 56, -27, -86, maze.collision_rects);
+            player = new Player(44, 56, 0, 0, maze.collision_rects);
             testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 8, 0);
 
             //Initialise enemy list
@@ -87,6 +87,9 @@ namespace MazeT
 
             BlindEnemy.run[0].sprite_sheet = Content.Load<Texture2D>("ogre_run");
             BlindEnemy.run[1].sprite_sheet = BlindEnemy.run[0].sprite_sheet;
+
+            SmartEnemy.run[0].sprite_sheet = Content.Load<Texture2D>("skeleton_run");
+            SmartEnemy.run[1].sprite_sheet = SmartEnemy.run[0].sprite_sheet;
 
             testFont = Content.Load<SpriteFont>("testFont");
         }
@@ -163,8 +166,7 @@ namespace MazeT
                 maze.pos.Y = maze.ymax - screen_height + 64;
             }
 
-            player.UpdateLocalPosition(maze.pos, 32, 32);
-            player.UpdateRectanglePosition(maze.pos);
+            player.UpdateLocalPosition(maze.pos);
             foreach (var enemy in enemies[maze.current_layer])
             {       
                 if (enemy.health > 0)
@@ -178,7 +180,6 @@ namespace MazeT
                         enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
                     }                    
                     enemy.UpdateLocalPosition(maze.pos);
-                    enemy.UpdateRectanglePosition(maze.pos);
 
                     if (player.sword_hitbox.Intersects(enemy.collision_rect))
                     {
@@ -214,13 +215,12 @@ namespace MazeT
                 maze.DisplayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont,
-                $"\nplayer tile: ({(int)(player.global_position.X + 98) / 128},{(int)(player.global_position.Y + 80) / 128})" +
-                $"\nenemy tile: {new Point((int)enemies[0][1].global_position.X / 128, (int)enemies[0][1].global_position.Y / 128)}" +
-                $"\nplayer pos: {player.global_position}" +
-                $"\nenemy local_pos: {enemies[0][1].local_position}" +
-                $"\nenemy rect_pos: {enemies[0][1].collision_rect.Location}",
-                new Vector2(0, 600), Color.White);
+            //_spriteBatch.DrawString(testFont,
+            //    $"\nplayer pos: {player.global_position}" +
+            //    $"\nplayer tile: {(int)(player.global_position.X + 98) / 128}, {(int)(player.global_position.Y + 80) / 128}" +
+            //    $"\nenemy pos: {enemies[0][1].global_position}" +
+            //    $"\nenemy tile: {new Point((int)enemies[0][1].global_position.X / 128, (int)enemies[0][1].global_position.Y / 128)}",
+            //    new Vector2(0, 600), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
             _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
             player.Display(_spriteBatch);            
@@ -228,7 +228,6 @@ namespace MazeT
             {                
                 if (enemy.health > 0)
                 {                    
-                    _spriteBatch.Draw(TPpad, enemy.collision_rect, Color.White);
                     enemy.Display(_spriteBatch);
                 }                
             }

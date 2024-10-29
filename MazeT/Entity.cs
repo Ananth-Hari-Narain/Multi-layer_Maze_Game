@@ -179,10 +179,13 @@ namespace MazeT
 
         }
 
-        public void UpdateLocalPosition(Vector2 mazePos, int offsetX = 0, int offsetY = 0)
+        public void UpdateLocalPosition(Vector2 mazePos)
         {
-            local_position.X = (int)(global_position.X - mazePos.X + offsetX);
-            local_position.Y = (int)(global_position.Y - mazePos.Y + offsetY);            
+            local_position.X = (int)(global_position.X - mazePos.X);
+            local_position.Y = (int)(global_position.Y - mazePos.Y);
+            //Whenever we update our local position, we tend to need to update
+            //the rectangle position.
+            UpdateRectanglePosition(mazePos); 
         }
 
         public void UpdateRectanglePosition(Vector2 mazePos)
@@ -192,7 +195,14 @@ namespace MazeT
 
         public virtual void TakeDamage(int damage_taken, Point source_of_damage)
         {
-            
+            //Deal damage
+            health -= damage_taken;
+
+            //Decide which way to push character back
+            //This is calculated by finding the vector between the centres,
+            // and finding a vector in the same direction of magnitude 4.
+            velocity = (collision_rect.Center - source_of_damage).ToVector2();
+            velocity = velocity * 4 / velocity.Length();
         }
 
         public virtual void Display(SpriteBatch spritebatch)
@@ -240,8 +250,8 @@ namespace MazeT
             health = 5;
             sword_range = 2;
             power = 1;
-            coll_rect_offset = new Vector2(75, 104);
-            collision_rect = new Rectangle(x+75, y+104, width, height);
+            coll_rect_offset = new Vector2(43, 72);
+            collision_rect = new Rectangle(x+43, y+72, width, height);
             global_position = new Vector2(x, y);
             velocity = new Vector2(0, 0);
             
@@ -375,7 +385,7 @@ namespace MazeT
                 //Let the player slide to a halt.
                 if (velocity.X > 0)
                 {
-                    velocity.X -= 0.3f;
+                    velocity.X -= 1;
                     if (velocity.X < 0)
                     {
                         velocity.X = 0;
@@ -383,7 +393,7 @@ namespace MazeT
                 }
                 else if (velocity.X < 0)
                 {
-                    velocity.X += 0.3f;
+                    velocity.X += 1;
                     if (velocity.X > 0)
                     {
                         velocity.X = 0;
@@ -396,7 +406,7 @@ namespace MazeT
 
                 if (velocity.Y > 0)
                 {
-                    velocity.Y -= 0.3f;
+                    velocity.Y -= 1;
                     if (velocity.Y < 0)
                     {
                         velocity.Y = 0;
@@ -404,7 +414,7 @@ namespace MazeT
                 }
                 else if (velocity.Y < 0)
                 {
-                    velocity.Y += 0.3f;
+                    velocity.Y += 1;
                     if (velocity.Y > 0)
                     {
                         velocity.Y = 0;
@@ -652,14 +662,8 @@ namespace MazeT
         {
             if (being_hit_timer <= 0)
             {
-                health -= damage_taken;
-                being_hit_timer = 500; //Enemy will be stunned for 500ms
-
-                //Decide which way to push enemy back
-                //This is calculated by finding the vector between the centres,
-                // and finding a vector in the same direction of magnitude 4.
-                velocity = (collision_rect.Center - source_of_damage).ToVector2();
-                velocity = velocity * 4 / velocity.Length();               
+                base.TakeDamage(damage_taken, source_of_damage);
+                being_hit_timer = 500; //Enemy will be stunned for 500ms           
             }  
             
         }
@@ -685,6 +689,7 @@ namespace MazeT
     {
         public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
         private int internal_anim_timer = 0; //Used for animation
+        private bool is_facing_left = true;
         private int being_hit_timer = 0;
         private bool is_targetting_player = false;
         private Vector2 destination;
@@ -697,37 +702,46 @@ namespace MazeT
             global_position = initial_position;
             destination = new(-2, -2);
             collision_rect.Width = 40;
-            collision_rect.Height = 30;
+            collision_rect.Height = 52;
+            coll_rect_offset = new Vector2(12, 12);
             maze_copy = maze;
-            coll_rect_offset = new(100, 128);
+
+            run[1] = new(64, 64, 4, 0, 0, startingIndex: 3); //Facing right
+            run[0] = new(64, 64, 4, 0, 64); //Facing left
         }
 
         public override void Update(int time_elapsed, int maze_layer, Vector2 player_pos)
         {
-            //Determine whether the player is in enemy's vicinity (128 pixel radius)
-            //only if the enemy is not targetting the player currently.
-            if ((player_pos-global_position).LengthSquared() < 16384 && !is_targetting_player)
+            //Unfortunately, the player's global position is the top left of the sprite, which has
+            //a lot of empty space. We need to instead use the player's centre.
+            player_pos += new Vector2(43, 72); //Note that this is the player's coll_rect_offset
+
+            //Next, we determine which tile the player and the enemy are on.
+            //The centre of the player is not quite (0,0), so there is a bit of an offset.
+            //Hence we add the vector (55, 8) to the player's position and then divide it.
+            Point player_tile = new((int)(player_pos.X + 55) / 128, (int)(player_pos.Y + 8) / 128);
+            Point enemy_tile = new((int)global_position.X / 128, (int)global_position.Y / 128);
+
+            //Start attacking the player if either the enemy gets hit by the player or the player gets 
+            //on the same tile as the player
+            if ((enemy_tile == player_tile || being_hit_timer > 0) && !is_targetting_player)
             {
                 is_targetting_player = true;
-                //Maybe do enraged animation or an exclamation icon
+                destination = new Vector2(-2, -2); //Reset the destination
             }
 
-            if (is_targetting_player)
+            //Chase the player if not being hit
+            if (being_hit_timer <= 0 && is_targetting_player)
             {
+                //Use path finding algorithm to get onto the same tile as the player,
+                //then hone in on the player                    
 
-                //Use path finding algorithm to get onto the same tile as the player, then hone
-                //in on the player
-
-                //The top corner of the player is not quite (0,0), so there is a bit of an offset.
-                //Hence we add the vector (98, 80) to the player's position and then divide it.
-                Point player_tile = new((int)(player_pos.X + 98) / 128, (int)(player_pos.Y + 80) / 128);
-                Point enemy_tile = new((int)global_position.X / 128, (int)global_position.Y / 128);
-
-                //If the player and enemy are on the same tile, the enemy can walk directly towards the player
-                if (true)
+                //If the player and enemy are on the same tile, the
+                //enemy can walk directly towards the player
+                if (player_tile == enemy_tile)
                 {
                     velocity = player_pos - global_position;
-                    velocity = velocity * 6 / velocity.Length(); //speed of 6
+                    velocity = velocity * 1.5f / velocity.Length(); //speed of 1.5
                 }
 
                 //The enemy
@@ -735,40 +749,107 @@ namespace MazeT
                 {
                     //Only choose a new destination once the enemy has reached its previously assigned destination
                     //or if a destination has not been assigned yet.
-                    destination = maze_copy.SingleLayerNextTileFinder(enemy_tile, player_tile).ToVector2();                    
-
-                    if (float.IsNaN((destination - global_position).LengthSquared()))
+                    if ((destination - global_position).LengthSquared() <= 25 || destination == new Vector2(-2, -2))
                     {
-                        throw new("WHAT???");
-                    }
-                        
-                    if (!(destination.X == -1 && destination.Y == -1))
-                    {
-                        //Convert maze indices to global coordinates of the centres of these tiles
-                        destination.X = destination.X * 128 + 64 - collision_rect.Width/2;
-                        destination.Y = destination.Y * 128 + 64 + collision_rect.Height/2;
+                        destination = maze_copy.SingleLayerNextTileFinder(enemy_tile, player_tile).ToVector2();
 
-                        velocity = destination - global_position;
-                        velocity = velocity * 4 / velocity.Length(); //Speed of 4      
+                        //If the enemy can path find to the player
+                        if (destination != new Vector2(-1, -1))
+                        {
+                            //Convert maze indices to global coordinates of the centres of these tiles
+                            destination.X = destination.X * 128 + 64 - (collision_rect.Width / 2);
+                            destination.Y = destination.Y * 128 + 64 - (collision_rect.Height / 2);
+                        }
+                            
                     }
+
+                    velocity = destination - global_position;
+                    velocity = velocity * 2 / velocity.Length(); //Speed of 2  
+
                     //If the enemy cannot path find to the player, make it stop attacking the player.
-                    else
+                    //Reset the enemy's velocity
+                    if (destination == new Vector2(-1, -1))
                     {
                         is_targetting_player = false;
-                    }            
+                        velocity = Vector2.Zero;
+                    }
                 }
 
-                //Update X coords and do collision handling function
+                //Update coordinates but do not do collision handling
+                collision_rect.Offset(velocity.X, velocity.Y);
+                global_position += velocity;
+
+                //Decide facing direction only if the enemy is not being hit
+                //and is targetting the player
+                if (velocity.X < 0)
+                {
+                    is_facing_left = true;
+                }
+                else if (velocity.X > 0)
+                {
+                    is_facing_left = false;
+                }
+
+                //Update animation frame
+                if (internal_anim_timer <= 0)
+                {
+                    if (is_facing_left)
+                    {
+                        run[0].UpdateAnimationFrame();
+                    }
+                    else
+                    {
+                        run[1].UpdateAnimationFrame();
+                    }
+                    internal_anim_timer = 310;
+
+                }
+                internal_anim_timer -= time_elapsed;
+                
+            }            
+
+            else
+            {
+                //Reduce speed exponentially
+                velocity /= 1.05f;
+
+                //Update X coords and do collision handling
                 collision_rect.Offset(velocity.X, 0);
                 global_position.X += velocity.X;
-                //HandleWallCollision(maze_layer, true);
+                HandleWallCollision(maze_layer, true);
 
                 //Update Y coords and do same thing
                 collision_rect.Offset(0, velocity.Y);
                 global_position.Y += velocity.Y;
-                //HandleWallCollision(maze_layer, false);
+                HandleWallCollision(maze_layer, false);
 
-                //Do animation stuff
+                //Reset animation frame to damaged
+                run[0].ResetAnimation(0);
+                run[1].ResetAnimation(3);
+
+                //Update timer
+                being_hit_timer -= time_elapsed;
+            }            
+        }
+
+        public override void TakeDamage(int damage_taken, Point source_of_damage)
+        {
+            if (being_hit_timer <= 0)
+            {
+                base.TakeDamage(damage_taken, source_of_damage);
+                being_hit_timer = 600;
+            }            
+        }
+
+        public override void Display(SpriteBatch spritebatch)
+        {
+            if (is_facing_left && is_targetting_player)
+            {
+                run[0].Display(spritebatch, local_position);
+            }
+            else
+            {
+                run[1].Display(spritebatch, local_position);
             }
         }
     }
