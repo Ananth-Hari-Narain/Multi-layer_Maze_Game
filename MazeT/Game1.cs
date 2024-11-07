@@ -20,6 +20,8 @@ namespace MazeT
 
         private Texture2D wall;
         private Texture2D TPpad;
+        private Texture2D minimap_bg;
+        private Texture2D player_icon;
         private List<CollisionCharacter>[] enemies;
         private Maze maze;
         private Player player;
@@ -57,6 +59,7 @@ namespace MazeT
                 enemies[i] = new List<CollisionCharacter>();
             }
 
+            //Generate enemies randomly but evenly across maze.
             enemies[0].Add(new BlindEnemy(2, testpath));
             enemies[0].Add(new SmartEnemy(2, new Vector2(170, 170), ref maze));            
             base.Initialize();            
@@ -70,14 +73,17 @@ namespace MazeT
             maze.maze_wall_H = Content.Load<Texture2D>("temp_wallH");
             maze.maze_wall_V = Content.Load<Texture2D>("temp_wallV");
             maze.maze_floor = Content.Load<Texture2D>("temp_floor");
-            maze.staircase = Content.Load<Texture2D>("temp_pad");
+            maze.tp_pad_design = Content.Load<Texture2D>("temp_pad");
 
             wall = new Texture2D(GraphicsDevice, 1, 1);
             wall.SetData(new Color[] { Color.Black });
 
             TPpad = new Texture2D(GraphicsDevice, 1, 1);
-            TPpad.SetData(new Color[] { Color.Purple });
+            TPpad.SetData(new Color[] { Color.DarkGreen });
 
+            minimap_bg = new Texture2D(GraphicsDevice, 1, 1);
+            minimap_bg.SetData(new Color[] { Color.White });
+            player_icon = Content.Load<Texture2D>("dwarf_icon_small");
             
             player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run"); 
             for (int i = 1; i < 4; i++)
@@ -123,76 +129,16 @@ namespace MazeT
             }
 
             test_point.X = (int)(player.global_position.X + 98) / 128;
-            test_point.Y = (int)(player.global_position.Y + 80) / 128;
+            test_point.Y = (int)(player.global_position.Y + 80) / 128;            
             
+            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);
             
-            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);            
-                      
-            
-            foreach (var rect in maze.TP_Pads[maze.current_layer])
+            if (currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
             {
-                if (player.collision_rect.Intersects(rect) && currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
-                {
-                    maze.current_layer = (maze.current_layer + 1) % maze.max_layers;
-                }
+                HandleIfPlayerIsOnTeleportationPads();
             }
-            
-            
-            //Side scrolling code//
-            if (player.local_position.X <= screen_width / 2 + 30 && player.local_position.X >= screen_width / 2 - 30)
-            {
-                maze.pos.X += player.global_position.X - player.old_global_position.X;
-            }
-            if (player.local_position.Y <= screen_height / 2 + 30 && player.local_position.Y >= screen_height / 2 - 30)
-            {
-                maze.pos.Y += player.global_position.Y - player.old_global_position.Y;
-            }
-
-            if (maze.pos.X < 0)
-            {
-                maze.pos.X = 0;
-            }
-            else if (maze.pos.X > maze.xmax - screen_width)
-            {
-                maze.pos.X = maze.xmax - screen_width;
-            }
-
-            if (maze.pos.Y < 0)
-            {
-                maze.pos.Y = 0;
-            }
-            else if (maze.pos.Y - 64 > maze.ymax - screen_height)
-            {
-                maze.pos.Y = maze.ymax - screen_height + 64;
-            }
-
-            player.UpdateLocalPosition(maze.pos);
-            foreach (var enemy in enemies[maze.current_layer])
-            {       
-                if (enemy.health > 0)
-                {
-                    if (enemy.GetType() == typeof(SmartEnemy))
-                    {
-                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer, player.global_position);
-                    }
-                    else
-                    {
-                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
-                    }                    
-                    enemy.UpdateLocalPosition(maze.pos);
-
-                    if (player.sword_hitbox.Intersects(enemy.collision_rect))
-                    {
-                        enemy.TakeDamage(player.power, player.sword_hitbox.Center);
-                    }
-                    //If the player succesfully hit the enemy, the player should not take damage
-                    // from that enemy
-                    else if (player.collision_rect.Intersects(enemy.collision_rect))
-                    {
-                        player.TakeDamage(enemy.power);
-                    }
-                }
-            }
+            HandleSideScrolling();
+            HandleEnemyLogic(gameTime); //Handles enemy code, including damage detection
 
             maze.UpdateMazeRects(prevMazePos - maze.pos);
 
@@ -231,9 +177,84 @@ namespace MazeT
                     enemy.Display(_spriteBatch);
                 }                
             }
+            maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg ,wall, TPpad, player_icon, player.global_position);            
             _spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void HandleSideScrolling()
+        {
+            //Side scrolling code//
+            if (player.local_position.X <= screen_width / 2 + 30 && player.local_position.X >= screen_width / 2 - 30)
+            {
+                maze.pos.X += player.global_position.X - player.old_global_position.X;
+            }
+            if (player.local_position.Y <= screen_height / 2 + 30 && player.local_position.Y >= screen_height / 2 - 30)
+            {
+                maze.pos.Y += player.global_position.Y - player.old_global_position.Y;
+            }
+
+            if (maze.pos.X < 0)
+            {
+                maze.pos.X = 0;
+            }
+            else if (maze.pos.X > maze.xmax - screen_width)
+            {
+                maze.pos.X = maze.xmax - screen_width;
+            }
+
+            if (maze.pos.Y < 0)
+            {
+                maze.pos.Y = 0;
+            }
+            else if (maze.pos.Y - 64 > maze.ymax - screen_height)
+            {
+                maze.pos.Y = maze.ymax - screen_height + 64;
+            }
+
+            player.UpdateLocalPosition(maze.pos);
+        }
+
+        private void HandleIfPlayerIsOnTeleportationPads()
+        {
+            foreach (var rect in maze.TP_Pads[maze.current_layer])
+            {
+                if (player.collision_rect.Intersects(rect))
+                {
+                    maze.current_layer = (maze.current_layer + 1) % maze.max_layers;
+                }
+            }
+        }
+
+        private void HandleEnemyLogic(GameTime gameTime)
+        {
+            foreach (var enemy in enemies[maze.current_layer])
+            {       
+                if (enemy.health > 0)
+                {
+                    if (enemy.GetType() == typeof(SmartEnemy))
+                    {
+                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer, player.global_position);
+                    }
+                    else
+                    {
+                        enemy.Update(gameTime.ElapsedGameTime.Milliseconds, maze.current_layer);
+                    }                    
+                    enemy.UpdateLocalPosition(maze.pos);
+
+                    if (player.sword_hitbox.Intersects(enemy.collision_rect))
+                    {
+                        enemy.TakeDamage(player.power, player.sword_hitbox.Center);
+                    }
+                    //If the player succesfully hit the enemy, the player should not take damage
+                    // from that enemy
+                    else if (player.collision_rect.Intersects(enemy.collision_rect))
+                    {
+                        player.TakeDamage(enemy.power);
+                    }
+                }
+            }
         }
     }
 }
