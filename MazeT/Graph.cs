@@ -2,13 +2,14 @@
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Versioning;
 
 namespace MazeT
 {
 
     /// <summary>
-    /// This class is used to store the data of the tile, including which other tiles it connects to
-    /// It also stores whether it is a teleportation pad or not.
+    /// This class is used to store the data of the tile, including which other tiles it connects to.
     /// </summary>
     internal class Tile
     {
@@ -74,39 +75,31 @@ namespace MazeT
     internal class Maze
     {
         private Tile[,,] _tiles;
-        public Tile[,,] Tiles { get { return _tiles; } set { _tiles = value; } }
 
-        private readonly int width;
+        public readonly int width;
 
-        private readonly int height;
+        public readonly int height;
         public int current_layer;
         public int max_layers;
 
         public Texture2D maze_wall_H;
         public Texture2D maze_wall_V;
         public Texture2D maze_floor;
-        public Texture2D staircase;
+        public Texture2D tp_pad_design;
+        public Texture2D end_tp_pad_design;
         private Rectangle[] wallRects; //to help divide up the sprite sheet
         private Rectangle[] floorRects; //to help divide up the sprite sheet
         public List<Rectangle>[] collision_rects;
-        public List<Rectangle>[] TP_Pads;
+        public List<Rectangle>[] TP_Pads;        
+        
+        public Vector2 pos = Vector2.Zero; // Global poisition of top left corner of maze
+        public int xmax;
+        public int ymax;
 
-        /// <summary>
-        /// Size in pixels
-        /// </summary>
-        public readonly int tileSize = 128;
-
-        /// <summary>
-        /// Global poisition of top left corner of maze
-        /// </summary>
-        public Vector2 pos = Vector2.Zero;
-        public int xmax, ymax;
-
-        /// <summary>
-        /// Generate the maze using a chosen algorithm
-        /// </summary>
+        // Generate the maze using the Wilson algorithm
         public Maze(int width, int height, int layers = 2)
         {
+            const int tileSize = 128;
             this.width = width;
             this.height = height;
             current_layer = 0;
@@ -128,7 +121,9 @@ namespace MazeT
 
         }        
 
-        public static bool IsBoolArrayFilled(bool[,,] array, bool value)
+        //Used for maze generation to check if all values in a boolean array equal
+        //a particular boolean value.
+        private static bool IsBoolArrayFilled(bool[,,] array, bool value)
         {
             for (int x = 0; x < array.GetLength(0); x++)
             {
@@ -144,6 +139,7 @@ namespace MazeT
             return true;
         }
 
+        //Generates the maze
         private void WilsonAlgorithm()
         {
             Tile[,,] currentWalk = new Tile[width, height, max_layers];
@@ -158,7 +154,7 @@ namespace MazeT
                 {
                     for (int k = 0; k < max_layers; k++)
                     {
-                        Tiles[i, j, k] = new Tile();
+                        _tiles[i, j, k] = new Tile();
                         currentWalk[i, j, k] = new Tile();
                         isVisited[i, j, k] = false;
                         isPartOfMaze[i, j, k] = false;
@@ -209,7 +205,8 @@ namespace MazeT
                     isVisited[currentX, currentY, currentZ] = true;
                     do
                     {
-                        if (!hasUsedTPPad && totalTPPads < maxTPpads && walkLength > 2)
+                        if (!hasUsedTPPad && totalTPPads < maxTPpads && walkLength > 2 
+                            && !(currentX == width-1 && currentY == height - 1))
                         {
                             //Tile can only connect layers after it has travelled for
                             //enough time across the layer
@@ -428,7 +425,7 @@ namespace MazeT
             
         }
         
-
+        //Draws the maze onto the screen.
         public void DisplayMaze(SpriteBatch spriteBatch)
         { 
             //Each tile is a 128x128 area
@@ -450,7 +447,12 @@ namespace MazeT
                     
                     if (_tiles[x, y, current_layer].Above || _tiles[x, y, current_layer].Below)
                     {
-                        spriteBatch.Draw(staircase, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
+                        spriteBatch.Draw(tp_pad_design, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
+                    }
+
+                    if (x == width-1 && y == width - 1)
+                    {
+                        spriteBatch.Draw(end_tp_pad_design, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
                     }
 
                     //If we are at the top
@@ -495,7 +497,7 @@ namespace MazeT
         /// the same place as the walls that they represent. Hence this function is very similar to the
         /// display function.
         /// </summary>
-        public void SetMazeRectangles()
+        private void SetMazeRectangles()
         {
             //These constants help to form the dimensions of the maze
             //They are the same as the constants in the display function
@@ -554,6 +556,11 @@ namespace MazeT
             }
         } 
 
+        /// <summary>
+        /// This function updates the position of all the rectangles in the maze. This is
+        /// necessary for the side scrolling code.
+        /// </summary>
+        /// <param name="deltaPos">How much the rectangles move by</param>
         public void UpdateMazeRects(Vector2 deltaPos)
         {
             
@@ -586,9 +593,39 @@ namespace MazeT
             List<List<Point>> all_paths = new();
             List<Point> beginning = new() { start };
             GenerateSingleLayerPaths(ref all_paths, beginning, pathlength, -1, layer);
-            //Choose a random path from the list
+
+            //Step 1: Find the longest path in all_paths
+            int longest_pathlength = 0; 
+            foreach (var path in all_paths)
+            {
+                //If we have found the longest possible path, we can stop the search
+                if (path.Count == pathlength)
+                {
+                    longest_pathlength = pathlength;
+                    break;
+                }
+                else if (path.Count > longest_pathlength)
+                {
+                    longest_pathlength = path.Count;
+                }
+            }
+
+            //Since deleting stuff from a list whilst iterating through it can 
+            //throw errors, I need to add valid paths to a separate list instead.
+            List<List<Point>> new_all_paths = new(); 
+
+            //Remove all paths that are shorter than the longest path
+            foreach (var path in all_paths)
+            {
+                if (path.Count == longest_pathlength)
+                {
+                    new_all_paths.Add(path);
+                }
+            }
+
+            //Choose a random path from the cleaned up list
             Random random = new();
-            List<Point> chosen_path = all_paths[random.Next(all_paths.Count)];
+            List<Point> chosen_path = new_all_paths[random.Next(new_all_paths.Count)];
 
             //Convert list indices to global coordinates.
             for (int i = 0; i < chosen_path.Count; i++)
@@ -604,13 +641,12 @@ namespace MazeT
         private void GenerateSingleLayerPaths(ref List<List<Point>> all_paths, List<Point> currentPath, int pathlength, int prevDirection, int layer)
         {
             Point currentNode = currentPath[currentPath.Count - 1];
-            Tile currentTile = Tiles[currentNode.X, currentNode.Y, layer];            
+            Tile currentTile = _tiles[currentNode.X, currentNode.Y, layer];            
 
             if (pathlength > 0)
             {
                 if (currentTile.Up == true && prevDirection != 1)
                 {
-
                     currentPath.Add(new Point(currentNode.X, currentNode.Y - 1));
                     GenerateSingleLayerPaths(ref all_paths, currentPath, pathlength - 1, 0, layer);
                     currentPath.RemoveAt(currentPath.Count - 1);
@@ -651,9 +687,7 @@ namespace MazeT
                     newPath.Add(new Point(p.X, p.Y));
                 }
                 all_paths.Add(newPath);
-            }
-
-            
+            }            
         }
         //public string DrawPath(List<Point> path)
         //{
@@ -770,8 +804,6 @@ namespace MazeT
 
             return new(-1, -1); //If cannot find a path
         }
-
-        
 
         public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
         {

@@ -13,6 +13,18 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin dwarf_icon_small.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:dwarf_icon_small.png
+
 #begin dwarf_run.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -24,6 +36,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:dwarf_run.png
+
+#begin endTPpad.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:endTPpad.png
 
 #begin ogre_run.png
 /importer:TextureImporter
@@ -48,6 +72,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:skeleton_run.png
+
+#begin sword_swing.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:sword_swing.png
 
 #begin temp_floor.png
 /importer:TextureImporter
@@ -85,6 +121,18 @@
 /processorParam:TextureFormat=Color
 /build:temp_wallV.png
 
+#begin test_potion.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:test_potion.png
+
 #begin testFont.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
@@ -103,4 +151,28 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:TPpadsmall.png;temp_pad.png
+
+#begin ui_heart_empty.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:ui_heart_empty.png
+
+#begin ui_heart_full.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:ui_heart_full.png
 

@@ -18,15 +18,29 @@ namespace MazeT
         private bool mazeTest = true; //testing code
         private Vector2 prevMazePos = new Vector2();       
 
+        //These textures are used for display the minimap
         private Texture2D wall;
         private Texture2D TPpad;
         private Texture2D minimap_bg;
         private Texture2D player_icon;
+        private Texture2D end_goal;
+
+        //UI images
+        private Texture2D heart_container_empty;
+        private Texture2D heart_container_full;
+
+        //These are our entities and static items
         private List<CollisionCharacter>[] enemies;
+        private List<Collectible>[] collectibles;
         private Maze maze;
         private Player player;
+
+        //These are the sprite sheets used for our enemies
+        Texture2D blind_enemy_run_sheet;
+        Texture2D smart_enemy_run_sheet;
+
+        //Testing code
         private SpriteFont testFont;
-        private List<Point> testpath;
         private Point test_point = new(0, 0);
         private Point final_test_point = new(3, 4);
 
@@ -50,30 +64,31 @@ namespace MazeT
             previousState = Keyboard.GetState();            
             maze = new Maze(15, 15, 2);
             player = new Player(44, 56, 0, 0, maze.collision_rects);
-            testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 8, 0);
+            List<Point> testpath2 = maze.GenerateSingleLayerPath(new Point(3, 2), 8, 0); ;
 
             //Initialise enemy list
             enemies = new List<CollisionCharacter>[maze.max_layers];
+            collectibles = new List<Collectible>[maze.max_layers];
             for (int i = 0; i < maze.max_layers; i++)
             {
                 enemies[i] = new List<CollisionCharacter>();
             }
 
             //Generate enemies randomly but evenly across maze.
-            enemies[0].Add(new BlindEnemy(2, testpath));
-            enemies[0].Add(new SmartEnemy(2, new Vector2(170, 170), ref maze));            
+            GenerateEnemies(50);
+            GenerateCollectibles();
             base.Initialize();            
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here            
+      
             maze.maze_wall_H = Content.Load<Texture2D>("temp_wallH");
             maze.maze_wall_V = Content.Load<Texture2D>("temp_wallV");
             maze.maze_floor = Content.Load<Texture2D>("temp_floor");
             maze.tp_pad_design = Content.Load<Texture2D>("temp_pad");
+            maze.end_tp_pad_design = Content.Load<Texture2D>("endTPpad");
 
             wall = new Texture2D(GraphicsDevice, 1, 1);
             wall.SetData(new Color[] { Color.Black });
@@ -83,19 +98,50 @@ namespace MazeT
 
             minimap_bg = new Texture2D(GraphicsDevice, 1, 1);
             minimap_bg.SetData(new Color[] { Color.White });
+
+            end_goal = new Texture2D(GraphicsDevice, 1, 1);
+            end_goal.SetData(new Color[] { Color.MonoGameOrange });
+
             player_icon = Content.Load<Texture2D>("dwarf_icon_small");
-            
+            heart_container_empty = Content.Load<Texture2D>("ui_heart_empty");
+            heart_container_full = Content.Load<Texture2D>("ui_heart_full");
+
             player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run"); 
             for (int i = 1; i < 4; i++)
             {
                 player.walk[i].sprite_sheet = player.walk[0].sprite_sheet;
             }
+            player.sword_swing = Content.Load<Texture2D>("sword_swing");
 
-            BlindEnemy.run[0].sprite_sheet = Content.Load<Texture2D>("ogre_run");
-            BlindEnemy.run[1].sprite_sheet = BlindEnemy.run[0].sprite_sheet;
+            blind_enemy_run_sheet = Content.Load<Texture2D>("ogre_run");
+            smart_enemy_run_sheet = Content.Load<Texture2D>("skeleton_run");
 
-            SmartEnemy.run[0].sprite_sheet = Content.Load<Texture2D>("skeleton_run");
-            SmartEnemy.run[1].sprite_sheet = SmartEnemy.run[0].sprite_sheet;
+            
+            for (int i = 0; i < maze.max_layers; i++)
+            {
+                //Now initialise the run AnimatedSpriteSheet for each enemy
+                foreach (var enemy in enemies[i])
+                {
+                    if (enemy is SmartEnemy smartEnemy)
+                    {
+                        smartEnemy.run[0].sprite_sheet = smart_enemy_run_sheet;
+                        smartEnemy.run[1].sprite_sheet = smart_enemy_run_sheet;
+                    }
+                    else if (enemy is BlindEnemy blind)
+                    {
+                        blind.run[0].sprite_sheet = blind_enemy_run_sheet;
+                        blind.run[1].sprite_sheet = blind_enemy_run_sheet;
+                    }
+                }
+
+                //Initialise the images for the collectibles
+                foreach (Collectible collectible in collectibles[i])
+                {
+                    collectible.image = Content.Load<Texture2D>("test_potion");
+                }
+            }
+
+            
 
             testFont = Content.Load<SpriteFont>("testFont");
         }
@@ -106,6 +152,7 @@ namespace MazeT
                 Exit();
 
             KeyboardState currentKeys = Keyboard.GetState();
+            //Testing code
             if (currentKeys.IsKeyDown(Keys.P) && !previousState.IsKeyDown(Keys.P))
             {
                 mazeTest = !mazeTest;
@@ -123,14 +170,12 @@ namespace MazeT
             {
                 this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 60d);
             }
-            else if (currentKeys.IsKeyDown(Keys.K))
-            {
-                testpath = maze.GenerateSingleLayerPath(new Point(5, 2), 10, 0);
-            }
 
             test_point.X = (int)(player.global_position.X + 98) / 128;
-            test_point.Y = (int)(player.global_position.Y + 80) / 128;            
+            test_point.Y = (int)(player.global_position.Y + 80) / 128;     
+            //End of testing code
             
+            //Main game loop
             player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);
             
             if (currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
@@ -161,14 +206,10 @@ namespace MazeT
                 maze.DisplayRects(_spriteBatch, wall);
             }
             //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            //_spriteBatch.DrawString(testFont,
-            //    $"\nplayer pos: {player.global_position}" +
-            //    $"\nplayer tile: {(int)(player.global_position.X + 98) / 128}, {(int)(player.global_position.Y + 80) / 128}" +
-            //    $"\nenemy pos: {enemies[0][1].global_position}" +
-            //    $"\nenemy tile: {new Point((int)enemies[0][1].global_position.X / 128, (int)enemies[0][1].global_position.Y / 128)}",
-            //    new Vector2(0, 600), Color.White);
+            _spriteBatch.DrawString(testFont,
+                $"\nplayer health: {player.health}",
+                new Vector2(0, 600), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
-            _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
             player.Display(_spriteBatch);            
             foreach (var enemy in enemies[maze.current_layer])
             {                
@@ -177,7 +218,8 @@ namespace MazeT
                     enemy.Display(_spriteBatch);
                 }                
             }
-            maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg ,wall, TPpad, player_icon, player.global_position);            
+            maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg ,wall, TPpad, player_icon, player.global_position, end_goal);
+            DrawHealthBar();
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -232,6 +274,20 @@ namespace MazeT
                 }
             }
         }
+
+        /// <summary>
+        /// Generates collectibles across maze.
+        /// </summary>
+        private void GenerateCollectibles()
+        {
+            collectibles.Initialize();
+            //Place a collectible somewhere in the maze for now
+            Collectible test = new(CollectibleType.HEAL, 3);
+            test.SetRect(new Point(158, 158));
+            test.global_position = new(158, 158);
+            collectibles[0].Add(test);
+        }
+
         private void HandleSideScrolling()
         {
             //Side scrolling code//
@@ -305,6 +361,7 @@ namespace MazeT
                 }
             }
         }
+
         private void DrawHealthBar()
         {
             for (int i = 0; i < player.health; i++)

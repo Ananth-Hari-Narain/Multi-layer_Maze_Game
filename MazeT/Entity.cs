@@ -5,28 +5,8 @@ using System;
 using System.Collections.Generic;
 
 namespace MazeT
-{
-    /// <summary>
-    /// This class is used as the base class for objects that do not have animation.
-    /// </summary>
-    internal class StandardSprite2D
-    {
-        private Texture2D image;
-        public Rectangle rect;
-        
-        public StandardSprite2D(string imagePath, GraphicsDevice graphics)
-        {
-            image = Texture2D.FromFile(graphics, imagePath);
-            rect = image.Bounds;
-        }
-
-        public virtual void Display(SpriteBatch spriteBatch)
-        {
-            spriteBatch.Draw(image, rect, Color.White);            
-        }
-    }
-    
-    /// <summary>
+{    
+   /// <summary>
     /// This class is used to represent one full animation sequence (for instance, walk forwards or walk backwards).
     /// For classes (e.g. the player class), who have multiple animation sequences, you will need multiple objects 
     /// of this class.
@@ -235,11 +215,18 @@ namespace MazeT
         private int internal_anim_timer = 0;
         private int internal_iframes_timer = 0;
 
-        private int sword_range; //This will change depending on the sword the player wields
-        public Rectangle sword_hitbox;
-        private int sword_out_timer; //Records how long the sword has been out for
-        private int sword_cooldown_timer; //Records how long there is till the next sword can be used
+        private int walking_speed = 2;
+        private int running_speed = 4;
+        private List<Collectible> collectibles;
 
+        private double sword_range; //This will change depending on the sword the player wields
+        public Rectangle sword_hitbox;
+        public Texture2D sword_swing;
+        
+        private int sword_out_timer; //Records how long the sword has been out for.
+        private int sword_out_length = 200; //This is the length of the time the sword will be out per attack.
+        private int sword_cooldown_timer; //Records how long there is till the next sword can be used.
+        private int sword_cooldown_length = 300; //This is the length of time between sword attacks.
         public Vector2 old_global_position; //This is used for the side scrolling code
 
         private FacingDirections direction = FacingDirections.NORTH;
@@ -259,19 +246,21 @@ namespace MazeT
             {
                 walk[i] = new AnimatedSpriteSheet(128, 128, 4, 0, 128 * i);
             }
+
+            collectibles = new(); //Initialise collectibles
         }
 
         public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, int time_elapsed)
         {
             int walkAnimationDelay = 200;
-            int playerSpeed = 2;
+            int playerSpeed = walking_speed;
             bool directionKeyPressed = false;
 
-            if (current_keys.IsKeyDown(Keys.Space) && sword_cooldown_timer <= 0)
+            if (current_keys.IsKeyDown(Keys.Space) && !previous_keys.IsKeyDown(Keys.Space) && sword_cooldown_timer <= 0)
             {
                 player_state = PlayerState.ATTACKING;
-                sword_out_timer = 200;
-                sword_cooldown_timer = 300;
+                sword_out_timer = sword_out_length;
+                sword_cooldown_timer = sword_cooldown_length;
             }
 
             //If the player is not attacking, they can walk
@@ -279,7 +268,7 @@ namespace MazeT
             {               
                 if (current_keys.IsKeyDown(Keys.LeftShift) || current_keys.IsKeyDown(Keys.RightShift))
                 {
-                    playerSpeed = 4;
+                    playerSpeed = running_speed;
                     walkAnimationDelay = 120;
                 }
                 if (current_keys.IsKeyDown(Keys.Up) || current_keys.IsKeyDown(Keys.W))
@@ -429,13 +418,13 @@ namespace MazeT
                 //way the player is facing 
                 if (direction == FacingDirections.NORTH || direction == FacingDirections.SOUTH)
                 {
-                    sword_hitbox.Height = sword_range * 20;
+                    sword_hitbox.Height = (int)sword_range * 20;
                     sword_hitbox.Width = 60;
                 }
                 else
                 {
                     sword_hitbox.Height = 60;
-                    sword_hitbox.Width = sword_range * 20;
+                    sword_hitbox.Width = (int)sword_range * 20;
                 }
 
                 //Position sword in front of player
@@ -485,8 +474,30 @@ namespace MazeT
             //Display sword
             if (player_state == PlayerState.ATTACKING)
             {
-                //Display sword code
+                if (direction == FacingDirections.NORTH)
+                {
+                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(270),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1, SpriteEffects.None, 0);
+                }
+                else if (direction == FacingDirections.EAST)
+                {
+                    //The original sprite is orientated to face east
+                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White);
+                }
+                else if (direction == FacingDirections.SOUTH)
+                {
+                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(90),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1,  SpriteEffects.None, 0);
+                }
+                else // Assuming this is FacingDirections.WEST
+                {
+                    //We use a slightly different override as we don't need to rotate it but we need to flip it
+                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White, 0,
+                        Vector2.Zero, SpriteEffects.FlipHorizontally, 0);
+                }
+
             }
+
             //Display player every 100ms if they are invulnerable to create
             //a blinking animation
             if (internal_iframes_timer % 200 <= 100)
@@ -517,6 +528,53 @@ namespace MazeT
             }
             
         }
+
+        public void CollectCollectible(Collectible collectible)
+        {
+            collectibles.Add(collectible);
+        }
+
+        public void UseCollectibles(int time_elapsed) 
+        {
+            //Iterate backwards through the loop to remove 
+            //entities as we go.
+            foreach (Collectible collectible in collectibles)
+            {
+                //Use collectibles
+                if (collectible.type == CollectibleType.HEAL)
+                {
+                    //Heal player
+                    health += collectible.value;                    
+                }
+                else if (collectible.type == CollectibleType.DAMAGEUP)
+                {                    
+                    power = collectible.value;
+                }
+                else if (collectible.type == CollectibleType.ATTACKSPEEDUP)
+                {
+                    sword_out_length = collectible.value;
+                    sword_cooldown_length = (int) Math.Round(collectible.value * 1.5);
+                }
+                else if (collectible.type == CollectibleType.SPEEDUP)
+                {
+                    walking_speed = collectible.value;
+                    running_speed = collectible.value + 2;
+                }
+                else if (collectible.type == CollectibleType.SWORDRANGEUP)
+                {
+                    sword_range = collectible.value;
+                }
+
+                //Update collectibles
+                collectible.Update(time_elapsed);
+
+                //Remove "dead" collectibles
+                if (!collectible.IsAlive())
+                {
+                    collectibles.Remove(collectible);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -526,9 +584,9 @@ namespace MazeT
     internal class BlindEnemy : CollisionCharacter
     {        
         //The blind enemy can run left or right (but can move up or down)
-        public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
+        public AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
         private int internal_anim_timer = 0; //Used for animation
-        public List<Point> path;
+        private List<Point> path;
         private int target_index;
         private int prev_target_index;
         private bool is_facing_left = true;
@@ -687,7 +745,7 @@ namespace MazeT
     /// </summary>
     internal class SmartEnemy: CollisionCharacter
     {
-        public static AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
+        public AnimatedSpriteSheet[] run = new AnimatedSpriteSheet[2];
         private int internal_anim_timer = 0; //Used for animation
         private bool is_facing_left = true;
         private int being_hit_timer = 0;
@@ -695,11 +753,11 @@ namespace MazeT
         private Vector2 destination;
         private static Maze maze_copy; //This is needed for the path finding algorithm
 
-        public SmartEnemy(int current_level, Vector2 initial_position, ref Maze maze)
+        public SmartEnemy(int current_level, Vector2 initial_pos, ref Maze maze)
         {
             health = 5;
             power = 2;
-            global_position = initial_position;
+            global_position = initial_pos;
             destination = new(-2, -2);
             collision_rect.Width = 40;
             collision_rect.Height = 52;
@@ -744,7 +802,7 @@ namespace MazeT
                     velocity = velocity * 1.5f / velocity.Length(); //speed of 1.5
                 }
 
-                //The enemy
+                //The enemy will need to path find to the player
                 else
                 {
                     //Only choose a new destination once the enemy has reached its previously assigned destination
