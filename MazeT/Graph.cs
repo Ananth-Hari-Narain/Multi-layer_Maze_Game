@@ -815,6 +815,108 @@ namespace MazeT
             }
         }
 
+        //Display a minimap onto the screen
+        public void DisplayTopCornerMinimapImage(SpriteBatch spritebatch, Texture2D bg_colour,
+            Texture2D wall_colour, Texture2D TP_pad, Texture2D player_icon, Vector2 player_pos,
+            Texture2D end_goal_colour)
+        {
+            //These constants help to form the dimensions of the maze
+            //They are the same as the constants in the display function
+            const int tile_width_y = 16;
+            const int tile_width_x = 16;
+            const int tile_segment_width = 8;
+            const int wallV_width = 3;
+
+            Point location = new(550, 0);
+
+            //Determine the tile the player is on.
+            //The centre of the player is not quite (0,0), so there is a bit of an offset.
+            //Hence we add the vector (98, 80) to the player's position and then divide it.
+            int player_tile_x = (int)(player_pos.X + 98) / 128;
+            int player_tile_y = (int)(player_pos.Y + 80) / 128;
+
+            //Draw the background first
+            spritebatch.Draw(bg_colour, new Rectangle(location, 
+                new((width - 1) * tile_width_x + tile_segment_width * 2,
+                 (height - 1) * tile_width_y + tile_segment_width * 2)),
+                Color.White);
+
+            //Draw the top and left hand-side walls
+            spritebatch.Draw(wall_colour,
+                new Rectangle(location.X,
+                location.Y,
+                (width - 1) * tile_width_x + tile_segment_width * 2,
+                5), Color.White);
+            spritebatch.Draw(wall_colour, 
+                new Rectangle(location.X, 
+                location.Y,
+                wallV_width, 
+                (height - 1) * tile_width_y + tile_segment_width * 2), Color.White);
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {                    
+                    //Add bottom rectangles (this code should mirror display code)
+                    if (_tiles[x, y, current_layer].Down == false)
+                    {
+                        spritebatch.Draw(wall_colour,
+                            new Rectangle(
+                            x * tile_width_x + location.X,
+                            (y + 1) * tile_width_y + location.Y,
+                            tile_segment_width * 2,
+                            5
+                            ), Color.White); ;
+                    }
+
+                    //Add right rectangles
+                    if (_tiles[x, y, current_layer].Right == false)
+                    {
+                        spritebatch.Draw(wall_colour, 
+                            new Rectangle(
+                            (x + 1) * tile_width_x - wallV_width + location.X, 
+                            y * tile_width_y + location.Y, 
+                            wallV_width, 
+                            tile_segment_width * 3
+                            ), Color.White);
+                    }
+
+                    //Add teleportation pads
+                    if (_tiles[x, y, current_layer].Above || _tiles[x, y, current_layer].Below)
+                    {
+                        spritebatch.Draw(TP_pad,
+                            new Rectangle(
+                            x * tile_width_x + (tile_width_x / 6) + location.X,
+                            y * tile_width_y + (2 * tile_width_y / 3) + location.Y,
+                            tile_width_x/3,
+                            tile_width_y/3
+                            ), Color.White);
+                    }
+
+                    //Draw the end goal on the minimap
+                    //This is in the bottom right corner of the first layer
+                    if (x == width-1 && y == width-1 && current_layer == 0)
+                    {
+                        spritebatch.Draw(end_goal_colour, 
+                            new Rectangle(
+                            x * tile_width_x + (tile_width_x / 4) + location.X,
+                            y * tile_width_y + (tile_width_y/ 2) + location.Y,
+                            tile_width_x / 2,
+                            tile_width_y / 2
+                            ), Color.White);
+                    }
+                    
+                    //Draw the player onto the minimap
+                    if (x == player_tile_x && y == player_tile_y)
+                    {
+                        Vector2 player_icon_location = new(x * tile_width_x + location.X, 
+                            y * tile_width_y + location.Y+ 4);
+                        spritebatch.Draw(player_icon, player_icon_location,  Color.White);
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// This is a tester function that will display the rectangles.
         /// </summary>
