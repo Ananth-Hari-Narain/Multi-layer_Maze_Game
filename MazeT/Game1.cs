@@ -183,6 +183,55 @@ namespace MazeT
             base.Draw(gameTime);
         }
 
+        /// <summary>
+        /// The goal of this function is to generate enemies randomly but
+        /// overall uniformly across the maze. We want to ensure that enemies 
+        /// cannot spawn on the same tile, as enemies stacked on top of each
+        /// other may confuse the user.
+        /// </summary>
+
+        private void GenerateEnemies(int noEnemiesPerLayer)
+        {
+            Random rng = new();
+            //Determine the size of each "chunk". Every chunk is a square region
+            //which will have one enemy exactly.
+            double chunk_area = maze.width * maze.height / (double)noEnemiesPerLayer;
+            //We use the ceiling here to ensure all parts of the maze are covered.
+            int chunk_width = (int) Math.Ceiling(Math.Sqrt(chunk_area));
+            //Each layer will be done separately
+            for (int z = 0; z < maze.max_layers; z++)
+            {
+                //Iterate through each chunk
+                for (int x = 0; x < maze.width; x+=chunk_width)
+                {
+                    for (int y = 0; y < maze.height; y+=chunk_width)
+                    {
+                        //Determine a random tile in the chunk that is not the starting tile
+                        //The player will always spawn at tile (0, 0) so as long as we only consider
+                        //tiles with an x > 0, we are fine.
+                        int enemyX = rng.Next(Math.Max(x, 1), Math.Min(maze.width, x + chunk_width));
+                        int enemyY = rng.Next(y, Math.Min(maze.height, y + chunk_width));                        
+
+                        //Determine which enemy to choose based on settings
+                        //For now, just do random between blind enemy and actual enemy
+                        int random_number = rng.Next(0,2);
+                        if (random_number == 0)
+                        {
+                            //Spawn a blind enemy
+                            enemies[z].Add(new BlindEnemy(1, maze.GenerateSingleLayerPath(new Point(enemyX, enemyY), 8, z)));
+                        }
+                        else
+                        {
+                            //Spawn a smart enemy
+                            //Convert the random point into coordinates
+                            Vector2 enemy_location = new(enemyX * 128 + 30, enemyY * 128 + 30);                            
+                            enemies[z].Add(new SmartEnemy(1, enemy_location, ref maze));
+                        }
+
+                    }
+                }
+            }
+        }
         private void HandleSideScrolling()
         {
             //Side scrolling code//
@@ -254,6 +303,13 @@ namespace MazeT
                         player.TakeDamage(enemy.power);
                     }
                 }
+            }
+        }
+        private void DrawHealthBar()
+        {
+            for (int i = 0; i < player.health; i++)
+            {
+                _spriteBatch.Draw(heart_container_full, new Vector2(1 + 45 * i, 1), Color.White);
             }
         }
     }
