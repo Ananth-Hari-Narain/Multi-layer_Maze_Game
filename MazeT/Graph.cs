@@ -4,6 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Versioning;
+using Microsoft.Xna.Framework.Input;
+using System.Collections;
+using System.Linq;
 
 namespace MazeT
 {
@@ -69,6 +72,26 @@ namespace MazeT
         public Tile(bool up, bool down, bool left, bool right, bool below, bool above)
         {
             tileConnections = new bool[] { up, down, left, right, below, above };
+        }
+
+        public bool isDeadEnd()
+        {
+            //A dead end should only have one connection
+            //i.e. only exactly 1 connection in the connection array
+            //should be true. This includes teleportation pads
+            int connection_count = 0;
+            for (int direction = 0; direction < 6; direction++)
+            {
+                if (tileConnections[direction] == true)
+                {
+                    connection_count++;
+                    if (connection_count > 1)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
     }
 
@@ -805,49 +828,9 @@ namespace MazeT
             return new(-1, -1); //If cannot find a path
         }
 
-        public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
-        {
-            int height;
-            int width;
-            int top;
-            int left;
-            for (int i = 1; i < path.Count; i++)
-            {
-                if (path[i].Y < path[i - 1].Y)
-                {
-                    width = 20;
-                    height = 128;
-                    top = path[i].Y - (int) pos.Y;
-                    left = path[i].X - (int) pos.X;
-                }
-                else if (path[i].Y > path[i - 1].Y)
-                {
-                    width = 20;
-                    height = 128;
-                    top = path[i - 1].Y - (int)pos.Y;
-                    left = path[i - 1].X - (int)pos.X;
-                }
-                else if (path[i].X < path[i-1].X)
-                {
-                    width = 128;
-                    height = 20;                   
-                    left = path[i].X - (int)pos.X;
-                    top = path[i].Y - (int)pos.Y;
-                }
-
-                else
-                {
-                    width = 128;
-                    height = 20;
-                    left = path[i - 1].X - (int)pos.X;
-                    top = path[i - 1].Y - (int)pos.Y;
-                }
-
-                spriteBatch.Draw(colour, new Rectangle(left, top, width, height), Color.White);
-            }
-        }
-
-        //Display a minimap onto the screen
+        /// <summary>
+        /// Display a minimap onto the screen
+        /// </summary>
         public void DisplayTopCornerMinimapImage(SpriteBatch spritebatch, Texture2D bg_colour,
             Texture2D wall_colour, Texture2D TP_pad, Texture2D player_icon, Vector2 player_pos,
             Texture2D end_goal_colour)
@@ -949,6 +932,87 @@ namespace MazeT
             }
         }
 
+        //Iterates through the layer and returns the dead ends.
+        public HashSet<Point> GetDeadEnds(int layer)
+        {
+            HashSet<Point> dead_ends = new();
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if (_tiles[x, y, layer].isDeadEnd())
+                    {
+                        dead_ends.Add(new Point(x, y));
+                    }
+                }
+            }
+            return dead_ends;
+        }
+
+        //Uses a flooding algorithm to spread through the layer to determine
+        //which parts can only be accessed by teleporting between layers.
+        //We will use a BFS on each room to determine this
+        public List<List<Point>> GetRooms(int layer)
+        {
+            List<List<Point>> rooms = new();
+            HashSet<Point> visited = new();
+
+            //These 
+            Queue<Point> tiles_to_visit = new();
+            HashSet<Point> current_room = new();
+            Point current_tile = new();
+            //Repeat until every tile in the layer has been visited
+            while (visited.Count <  width * height)
+            {
+                bool continue_for_loop = true;
+                //Determine a starting position.
+                //This will be a tile that is not visited yet
+                for (int x = 0; x < width && continue_for_loop; x++)
+                {
+                    for (int y = 0; y < height && continue_for_loop; y++)
+                    {
+                        current_tile = new(x, y);
+                        if (!visited.Contains(current_tile))
+                        {
+                            tiles_to_visit.Enqueue(current_tile);
+                            continue_for_loop = false; //Break both for loops
+                        }
+                    }
+                }
+
+                //Now do a breadth first search from this starting point
+                while (tiles_to_visit.Count > 0){
+                    visited.Add(current_tile);
+                    current_room.Add(current_tile);
+
+                    //Add all neighbours to current tile.
+                    if (!visited.Contains(new(current_tile.X, current_tile.Y - 1))
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Up)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X, current_tile.Y - 1));
+                    }
+                    if (!visited.Contains(new(current_tile.X, current_tile.Y + 1)) &&
+                        _tiles[current_tile.X, current_tile.Y, current_layer].Down)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X, current_tile.Y + 1));
+                    }
+                    if (!visited.Contains(new(current_tile.X - 1, current_tile.Y))
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Left)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X - 1, current_tile.Y));
+                    }
+                    if (!visited.Contains(new(current_tile.X + 1, current_tile.Y))
+                        && _tiles[current_tile.X, current_tile.Y, current_layer].Right)
+                    {
+                        tiles_to_visit.Enqueue(new(current_tile.X + 1, current_tile.Y));
+                    }
+                }
+
+                rooms.Add(current_room.ToList<Point>());
+            }
+            return rooms;
+        }
+
         /// <summary>
         /// This is a tester function that will display the rectangles.
         /// </summary>
@@ -957,6 +1021,49 @@ namespace MazeT
             foreach (Rectangle rect in collision_rects[current_layer])
             {
                 spriteBatch.Draw(rectColour, rect, Color.White);
+            }
+        }
+
+        //Tester function to see if a path is correctly determined.
+        public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
+        {
+            int height;
+            int width;
+            int top;
+            int left;
+            for (int i = 1; i < path.Count; i++)
+            {
+                if (path[i].Y < path[i - 1].Y)
+                {
+                    width = 20;
+                    height = 128;
+                    top = path[i].Y - (int)pos.Y;
+                    left = path[i].X - (int)pos.X;
+                }
+                else if (path[i].Y > path[i - 1].Y)
+                {
+                    width = 20;
+                    height = 128;
+                    top = path[i - 1].Y - (int)pos.Y;
+                    left = path[i - 1].X - (int)pos.X;
+                }
+                else if (path[i].X < path[i - 1].X)
+                {
+                    width = 128;
+                    height = 20;
+                    left = path[i].X - (int)pos.X;
+                    top = path[i].Y - (int)pos.Y;
+                }
+
+                else
+                {
+                    width = 128;
+                    height = 20;
+                    left = path[i - 1].X - (int)pos.X;
+                    top = path[i - 1].Y - (int)pos.Y;
+                }
+
+                spriteBatch.Draw(colour, new Rectangle(left, top, width, height), Color.White);
             }
         }
     }

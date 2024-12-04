@@ -10,14 +10,7 @@ namespace MazeT
     internal class StandardSprite2D
     {
         public Texture2D image;
-        public Rectangle rect;
-
-        //Set the rectangle dimesions to perfectly encompass the image        
-        public void SetRect(Point pos)
-        {
-            rect = image.Bounds;
-            rect.Location = pos;
-        }       
+        public Rectangle rect;        
 
         public virtual void Display(SpriteBatch spritebatch)
         {
@@ -50,24 +43,38 @@ namespace MazeT
         */
 
         public CollectibleType type;
-        public int value;
+        public double value;
         public bool isCollected;
         //This is used to determine how long the collectible will last once it has been collected.
         private int self_kill_timer;
         public Vector2 global_position;
 
-        public Collectible(CollectibleType type, int value)
+        public Collectible(CollectibleType type, double value, Point position)
         {
             this.type = type;
             this.value = value;
+            global_position = position.ToVector2();
         }
 
-        public void Update(int time_elapsed)
+        //Set dimensions of rectangle
+        public void SetRect(Point pos)
+        {
+            //We know the sprite is 51x63 pixels
+            rect = new Rectangle(pos.X, pos.Y, 51, 63);
+        }
+
+        public void Update(int time_elapsed, Vector2 maze_pos)
         {
             if (isCollected)
             {
                 self_kill_timer -= time_elapsed;
-            }            
+            }
+            else
+            {
+                //Update local position
+                rect.Offset(maze_pos);
+            }
+
         }
 
         public void UpdateRectanglePosition(Vector2 maze_pos)
@@ -87,6 +94,7 @@ namespace MazeT
 
         public void GetCollected()
         {
+            isCollected = true;
             if (type == CollectibleType.HEAL || type == CollectibleType.STANDARD)
             {
                 //This collectible "dies" instantly as it is a one use item

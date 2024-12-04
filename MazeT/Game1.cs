@@ -5,12 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Mime;
+using System.Threading;
 
 namespace MazeT
 {
     public class Game1 : Game
     {
+        private static Random rng = new(); //Generate one randomiser to make numbers generated more random.
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private const int screen_width = 800;
@@ -76,7 +79,7 @@ namespace MazeT
 
             //Generate enemies randomly but evenly across maze.
             GenerateEnemies(50);
-            GenerateCollectibles();
+            GenerateCollectibles(8, 3);
             base.Initialize();            
         }
 
@@ -138,6 +141,7 @@ namespace MazeT
                 foreach (Collectible collectible in collectibles[i])
                 {
                     collectible.image = Content.Load<Texture2D>("test_potion");
+                    collectible.SetRect(collectible.global_position.ToPoint());
                 }
             }
 
@@ -184,6 +188,8 @@ namespace MazeT
             }
             HandleSideScrolling();
             HandleEnemyLogic(gameTime); //Handles enemy code, including damage detection
+            HandleCollectibles(); //Deal with picking up and updating collectibles
+            
 
             maze.UpdateMazeRects(prevMazePos - maze.pos);
 
@@ -218,6 +224,12 @@ namespace MazeT
                     enemy.Display(_spriteBatch);
                 }                
             }
+
+            foreach (Collectible collectible in collectibles[maze.current_layer])
+            {
+                collectible.Display(_spriteBatch);
+            }
+
             maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg ,wall, TPpad, player_icon, player.global_position, end_goal);
             DrawHealthBar();
             _spriteBatch.End();
@@ -234,7 +246,6 @@ namespace MazeT
 
         private void GenerateEnemies(int noEnemiesPerLayer)
         {
-            Random rng = new();
             //Determine the size of each "chunk". Every chunk is a square region
             //which will have one enemy exactly.
             double chunk_area = maze.width * maze.height / (double)noEnemiesPerLayer;
@@ -278,14 +289,150 @@ namespace MazeT
         /// <summary>
         /// Generates collectibles across maze.
         /// </summary>
-        private void GenerateCollectibles()
+        private void GenerateCollectibles(int num_powerups_per_layer, int num_standard_collectibles_per_layer)
         {
-            collectibles.Initialize();
-            //Place a collectible somewhere in the maze for now
-            Collectible test = new(CollectibleType.HEAL, 3);
-            test.SetRect(new Point(158, 158));
-            test.global_position = new(158, 158);
-            collectibles[0].Add(test);
+            double chunk_area = maze.width * maze.height / (double) (num_powerups_per_layer + num_standard_collectibles_per_layer);
+            //We use the ceiling here to ensure all parts of the maze are covered.
+            int chunk_width = (int)Math.Ceiling(Math.Sqrt(chunk_area));
+            //Initialise collectibles[] array
+            for (int i = 0; i < collectibles.Length; i++)
+            {
+                collectibles[i] = new();
+            }
+
+            //Actual code
+            //Place power ups in random dead ends across both floors
+            for (int z = 0; z < maze.max_layers; z++)
+            {
+                int num_standard_collectibles_in_this_layer = 0;
+                HashSet<Point> dead_ends = maze.GetDeadEnds(z);
+                //Iterate through each chunk. Choose only the dead ends (if there are dead ends in the chunk)
+                for (int x = 0; x < maze.width; x += chunk_width)
+                {
+                    for (int y = 0; y < maze.height; y += chunk_width)
+                    {
+                        //Go through each tile in the chunk to see if it is maze
+                        List<Point> dead_ends_in_chunk = new();
+                        for (int x_tile = x; x_tile < x+chunk_width && x_tile < maze.width; x_tile++)
+                        {
+                            for (int y_tile = y; y_tile < y+chunk_width && y_tile < maze.height; y_tile++)
+                            {
+                                Point current_tile = new Point(x_tile, y_tile);
+                                if (dead_ends.Contains(current_tile))
+                                {
+                                    dead_ends_in_chunk.Add(current_tile);
+                                }
+                            }
+                        }
+
+                        if (dead_ends_in_chunk.Count > 0)
+                        {
+                            //Add one random collectible in
+                            Point chosen_point = dead_ends_in_chunk[rng.Next(dead_ends_in_chunk.Count)];
+                            //Covert point into global coordinates
+                            chosen_point.X = chosen_point.X * 128 + 32;
+                            chosen_point.Y = chosen_point.Y * 128 + 32;
+
+                            //Determine the type and value of the collectible. We can have standard collectibles now
+                            //provided we have not generated all of them yet
+                            CollectibleType type;
+                            if (num_standard_collectibles_per_layer > num_standard_collectibles_in_this_layer)
+                            {
+                                type = (CollectibleType)rng.Next(0, 6);
+                            }
+                            else
+                            {
+                                type = (CollectibleType)rng.Next(1, 6);
+                            }
+                             
+                            double value = 0;
+                            //Determine a value for them
+                            if (type == CollectibleType.STANDARD)
+                            {
+                                value = 1;//Doesn't matter for standard collectibles
+                            }
+                            else if (type == CollectibleType.HEAL)
+                            {
+                                //Heal anywhere from one to three hearts
+                                value = rng.Next(1, 4);
+                            }
+                            else if (type == CollectibleType.DAMAGEUP)
+                            {
+                                //This is effectively a new weapon.
+                                //This needs to be one point stronger than the user's current weapon
+                                value = player.power + 1;
+                            }
+                            else if (type == CollectibleType.ATTACKSPEEDUP)
+                            {
+                                //The time between attacks should be between 100 and 180ms
+                                value = rng.Next(100, 181);
+                            }
+                            else if (type == CollectibleType.SPEEDUP)
+                            {
+                                //The speed should only be increased to 3 or 4 (otherwise you go too fast)
+                                value = rng.Next(3, 5);
+                            }
+                            else if (type == CollectibleType.SWORDRANGEUP)
+                            {
+                                //This is like getting a longer weapon
+                                //This should only increase by a small amount from the player's current range
+                                //The increase in range should go from 0.1 to 0.25 
+                                value = player.sword_range + rng.Next(110, 250) / 1000.0;
+                            }
+
+                            collectibles[z].Add(new Collectible(type, value, chosen_point));
+                        }
+                        //If there are no dead ends
+                        else
+                        {
+                            //Add a powerup at a random point in the chunk
+                            int powerupX = rng.Next(Math.Max(x, 1), Math.Min(maze.width, x + chunk_width));
+                            int powerupY = rng.Next(y, Math.Min(maze.height, y + chunk_width));
+
+                            //Convert the tile position into coordinates
+                            powerupX = powerupX * 128 + 32;
+                            powerupY = powerupY * 128 + 32;
+
+                            //Determine the power up type (there are 5 different types which aren't
+                            //standard types.
+                            CollectibleType type = (CollectibleType)rng.Next(1, 6);
+                            double value = 0;
+                            //Determine a value for them
+                            if (type == CollectibleType.HEAL)
+                            {
+                                //Heal anywhere from one to three hearts
+                                value = rng.Next(1, 4);
+                            }
+                            else if (type == CollectibleType.DAMAGEUP)
+                            {
+                                //This is effectively a new weapon.
+                                //This needs to be one point stronger than the user's current weapon
+                                value = player.power + 1;
+                            }
+                            else if (type == CollectibleType.ATTACKSPEEDUP)
+                            {
+                                //The time between attacks should be between 100 and 180ms
+                                value = rng.Next(100, 181);
+                            }
+                            else if (type == CollectibleType.SPEEDUP)
+                            {
+                                //The speed should only be increased to 3 or 4 (otherwise you go too fast)
+                                value = rng.Next(3, 5);
+                            }
+                            else if (type == CollectibleType.SWORDRANGEUP)
+                            {
+                                //This is like getting a longer weapon
+                                //This should only increase by a small amount from the player's current range
+                                //The increase in range should go from 0.1 to 0.25 
+                                value = player.sword_range + rng.Next(110, 250) / 1000.0;
+                            }
+
+                            collectibles[z].Add(new Collectible(type, value, new Point(powerupX, powerupY)));
+                        }
+                    }
+                }
+            }             
+
         }
 
         private void HandleSideScrolling()
@@ -359,6 +506,23 @@ namespace MazeT
                         player.TakeDamage(enemy.power);
                     }
                 }
+            }
+        }
+
+        private void HandleCollectibles()
+        {
+            //Iterate backwards through list to remove items
+            for (int i = 0; i < collectibles[maze.current_layer].Count; i++)
+            {
+                //Update local position of collectible
+                collectibles[maze.current_layer][i].UpdateRectanglePosition(maze.pos);
+
+                //If the collectible intersects with the player, collect the collectible
+                if (collectibles[maze.current_layer][i].rect.Intersects(player.collision_rect))
+                {
+                    player.CollectCollectible(collectibles[maze.current_layer][i]);
+                    collectibles[maze.current_layer].RemoveAt(i);
+                }                
             }
         }
 

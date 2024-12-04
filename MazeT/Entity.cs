@@ -219,7 +219,7 @@ namespace MazeT
         private int running_speed = 4;
         private List<Collectible> collectibles;
 
-        private double sword_range; //This will change depending on the sword the player wields
+        public double sword_range; //This will change depending on the sword the player wields
         public Rectangle sword_hitbox;
         public Texture2D sword_swing;
         
@@ -432,8 +432,8 @@ namespace MazeT
                 //topleft, need to adjust sword position accordingly
                 if (direction == FacingDirections.NORTH)
                 {
-                    sword_hitbox.X = collision_rect.Center.X - (sword_hitbox.Width/2);
-                    sword_hitbox.Y = collision_rect.Top - sword_hitbox.Height;
+                    sword_hitbox.X = collision_rect.Center.X;
+                    sword_hitbox.Y = collision_rect.Top - sword_hitbox.Height/2;
                 }
                 else if (direction == FacingDirections.EAST)
                 {
@@ -442,8 +442,8 @@ namespace MazeT
                 }
                 else if (direction == FacingDirections.SOUTH)
                 {
-                    sword_hitbox.X = collision_rect.Center.X - (sword_hitbox.Width / 2);
-                    sword_hitbox.Y = collision_rect.Bottom;
+                    sword_hitbox.X = collision_rect.Center.X;
+                    sword_hitbox.Y = collision_rect.Bottom + sword_hitbox.Height/2;
                 }
                 else
                 {
@@ -460,7 +460,8 @@ namespace MazeT
                 }
 
             }
-           
+
+            UseCollectibles(time_elapsed, maze_pos); 
             UpdateRectanglePosition(maze_pos);
             internal_anim_timer -= time_elapsed;
             if (internal_iframes_timer > 0)
@@ -476,8 +477,8 @@ namespace MazeT
             {
                 if (direction == FacingDirections.NORTH)
                 {
-                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(270),
-                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1, SpriteEffects.None, 0);
+                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White, MathHelper.ToRadians(270),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), SpriteEffects.None, 0);
                 }
                 else if (direction == FacingDirections.EAST)
                 {
@@ -486,8 +487,8 @@ namespace MazeT
                 }
                 else if (direction == FacingDirections.SOUTH)
                 {
-                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(90),
-                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1,  SpriteEffects.None, 0);
+                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White, MathHelper.ToRadians(90),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), SpriteEffects.None, 0);
                 }
                 else // Assuming this is FacingDirections.WEST
                 {
@@ -531,47 +532,57 @@ namespace MazeT
 
         public void CollectCollectible(Collectible collectible)
         {
+            collectible.GetCollected();
             collectibles.Add(collectible);
         }
 
-        public void UseCollectibles(int time_elapsed) 
-        {
-            //Iterate backwards through the loop to remove 
-            //entities as we go.
-            foreach (Collectible collectible in collectibles)
+        public void UseCollectibles(int time_elapsed, Vector2 maze_pos) 
+        {            
+            for (int i = 0; i < collectibles.Count; i++)
             {
                 //Use collectibles
-                if (collectible.type == CollectibleType.HEAL)
+                if (collectibles[i].type == CollectibleType.HEAL)
                 {
                     //Heal player
-                    health += collectible.value;                    
+                    health += (int) collectibles[i].value;                    
                 }
-                else if (collectible.type == CollectibleType.DAMAGEUP)
+                else if (collectibles[i].type == CollectibleType.DAMAGEUP)
                 {                    
-                    power = collectible.value;
+                    power = (int) collectibles[i].value;
                 }
-                else if (collectible.type == CollectibleType.ATTACKSPEEDUP)
+                else if (collectibles[i].type == CollectibleType.ATTACKSPEEDUP)
                 {
-                    sword_out_length = collectible.value;
-                    sword_cooldown_length = (int) Math.Round(collectible.value * 1.5);
+                    sword_out_length = (int) collectibles[i].value;
+                    sword_cooldown_length = (int) Math.Round(collectibles[i].value * 1.5);
                 }
-                else if (collectible.type == CollectibleType.SPEEDUP)
+                else if (collectibles[i].type == CollectibleType.SPEEDUP)
                 {
-                    walking_speed = collectible.value;
-                    running_speed = collectible.value + 2;
+                    walking_speed = (int) collectibles[i].value;
+                    running_speed = (int) collectibles[i].value + 2;
                 }
-                else if (collectible.type == CollectibleType.SWORDRANGEUP)
+                else if (collectibles[i].type == CollectibleType.SWORDRANGEUP)
                 {
-                    sword_range = collectible.value;
+                    sword_range = collectibles[i].value;
                 }
 
                 //Update collectibles
-                collectible.Update(time_elapsed);
+                collectibles[i].Update(time_elapsed, maze_pos);
 
                 //Remove "dead" collectibles
-                if (!collectible.IsAlive())
-                {
-                    collectibles.Remove(collectible);
+                if (!collectibles[i].IsAlive())
+                {                    
+                    //Return to original
+                    if (collectibles[i].type == CollectibleType.ATTACKSPEEDUP)
+                    {
+                        sword_out_length = 200;
+                        sword_cooldown_length = 300;
+                    }
+                    if (collectibles[i].type == CollectibleType.SPEEDUP)
+                    {
+                        walking_speed = 2;
+                        running_speed = 4;
+                    }
+                    collectibles.Remove(collectibles[i]);
                 }
             }
         }
