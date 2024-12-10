@@ -432,8 +432,8 @@ namespace MazeT
                 //topleft, need to adjust sword position accordingly
                 if (direction == FacingDirections.NORTH)
                 {
-                    sword_hitbox.X = collision_rect.Center.X;
-                    sword_hitbox.Y = collision_rect.Top - sword_hitbox.Height/2;
+                    sword_hitbox.X = collision_rect.X-5;
+                    sword_hitbox.Y = collision_rect.Top - sword_hitbox.Height;
                 }
                 else if (direction == FacingDirections.EAST)
                 {
@@ -442,8 +442,8 @@ namespace MazeT
                 }
                 else if (direction == FacingDirections.SOUTH)
                 {
-                    sword_hitbox.X = collision_rect.Center.X;
-                    sword_hitbox.Y = collision_rect.Bottom + sword_hitbox.Height/2;
+                    sword_hitbox.X = collision_rect.X-5;
+                    sword_hitbox.Y = collision_rect.Bottom;
                 }
                 else
                 {
@@ -477,8 +477,8 @@ namespace MazeT
             {
                 if (direction == FacingDirections.NORTH)
                 {
-                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White, MathHelper.ToRadians(270),
-                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), SpriteEffects.None, 0);
+                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(270),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1, SpriteEffects.None, 0);
                 }
                 else if (direction == FacingDirections.EAST)
                 {
@@ -487,8 +487,8 @@ namespace MazeT
                 }
                 else if (direction == FacingDirections.SOUTH)
                 {
-                    spriteBatch.Draw(sword_swing, sword_hitbox, null, Color.White, MathHelper.ToRadians(90),
-                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), SpriteEffects.None, 0);
+                    spriteBatch.Draw(sword_swing, sword_hitbox.Center.ToVector2(), null, Color.White, MathHelper.ToRadians(90),
+                        new Vector2(sword_swing.Width / 2, sword_swing.Height / 2), 1, SpriteEffects.None, 0);
                 }
                 else // Assuming this is FacingDirections.WEST
                 {
