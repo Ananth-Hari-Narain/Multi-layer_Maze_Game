@@ -218,8 +218,7 @@ namespace MazeT
         private int walking_speed = 2;
         private int running_speed = 4;
         private List<Collectible> collectibles;
-
-        public double sword_range; //This will change depending on the sword the player wields
+        
         public Rectangle sword_hitbox;
         public Texture2D sword_swing;
         
@@ -235,7 +234,6 @@ namespace MazeT
         {
             CollisionCharacter.wall_rects = wall_rects;
             health = 5;
-            sword_range = 2;
             power = 1;
             coll_rect_offset = new Vector2(43, 72);
             collision_rect = new Rectangle(x+43, y+72, width, height);
@@ -255,6 +253,7 @@ namespace MazeT
             int walkAnimationDelay = 200;
             int playerSpeed = walking_speed;
             bool directionKeyPressed = false;
+            const double sword_range = 2; //Determines how large sword is
 
             if (current_keys.IsKeyDown(Keys.Space) && !previous_keys.IsKeyDown(Keys.Space) && sword_cooldown_timer <= 0)
             {
@@ -532,7 +531,7 @@ namespace MazeT
 
         public void CollectCollectible(Collectible collectible)
         {
-            collectible.GetCollected();
+            collectible.BeCollected();
             collectibles.Add(collectible);
         }
 
@@ -559,10 +558,6 @@ namespace MazeT
                 {
                     walking_speed = (int) collectibles[i].value;
                     running_speed = (int) collectibles[i].value + 2;
-                }
-                else if (collectibles[i].type == CollectibleType.SWORDRANGEUP)
-                {
-                    sword_range = collectibles[i].value;
                 }
 
                 //Update collectibles
