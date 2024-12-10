@@ -28,9 +28,10 @@ namespace MazeT
         private Texture2D player_icon;
         private Texture2D end_goal;
 
-        //UI images
+        //UI images and fonts
         private Texture2D heart_container_empty;
         private Texture2D heart_container_full;
+        private SpriteFont score_font;
 
         //These are our entities and static items
         private List<CollisionCharacter>[] enemies;
@@ -137,16 +138,26 @@ namespace MazeT
                     }
                 }
 
+                Texture2D powerup = Content.Load<Texture2D>("test_potion");
+                Texture2D chest = Content.Load<Texture2D>("chest");
+
                 //Initialise the images for the collectibles
                 foreach (Collectible collectible in collectibles[i])
                 {
-                    collectible.image = Content.Load<Texture2D>("test_potion");
+                    if (collectible.type == CollectibleType.STANDARD)
+                    {
+                        collectible.image = chest;
+                    }
+                    else
+                    {
+                        collectible.image = powerup;
+                    }                    
                     collectible.SetRect(collectible.global_position.ToPoint());
                 }
             }
 
-            
-
+            //Load fonts
+            score_font = Content.Load<SpriteFont>("fonts/score_font");
             testFont = Content.Load<SpriteFont>("testFont");
         }
 
@@ -216,6 +227,7 @@ namespace MazeT
                 $"\nplayer health: {player.health}",
                 new Vector2(0, 600), Color.White);
             //maze.DrawPath(testpath, _spriteBatch,TPpad);
+            _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
             player.Display(_spriteBatch);            
             foreach (var enemy in enemies[maze.current_layer])
             {                
@@ -338,11 +350,11 @@ namespace MazeT
                             CollectibleType type;
                             if (num_standard_collectibles_per_layer > num_standard_collectibles_in_this_layer)
                             {
-                                type = (CollectibleType)rng.Next(0, 6);
+                                type = (CollectibleType)rng.Next(0, 5);
                             }
                             else
                             {
-                                type = (CollectibleType)rng.Next(1, 6);
+                                type = (CollectibleType)rng.Next(1, 5);
                             }
                              
                             double value = 0;
@@ -372,13 +384,6 @@ namespace MazeT
                                 //The speed should only be increased to 3 or 4 (otherwise you go too fast)
                                 value = rng.Next(3, 5);
                             }
-                            else if (type == CollectibleType.SWORDRANGEUP)
-                            {
-                                //This is like getting a longer weapon
-                                //This should only increase by a small amount from the player's current range
-                                //The increase in range should go from 0.1 to 0.25 
-                                value = player.sword_range + rng.Next(110, 250) / 1000.0;
-                            }
 
                             collectibles[z].Add(new Collectible(type, value, chosen_point));
                         }
@@ -393,9 +398,9 @@ namespace MazeT
                             powerupX = powerupX * 128 + 32;
                             powerupY = powerupY * 128 + 32;
 
-                            //Determine the power up type (there are 5 different types which aren't
-                            //standard types.
-                            CollectibleType type = (CollectibleType)rng.Next(1, 6);
+                            //Determine the power up type (there are 4 different types which aren't
+                            //standard types).
+                            CollectibleType type = (CollectibleType)rng.Next(1, 5);
                             double value = 0;
                             //Determine a value for them
                             if (type == CollectibleType.HEAL)
@@ -418,13 +423,6 @@ namespace MazeT
                             {
                                 //The speed should only be increased to 3 or 4 (otherwise you go too fast)
                                 value = rng.Next(3, 5);
-                            }
-                            else if (type == CollectibleType.SWORDRANGEUP)
-                            {
-                                //This is like getting a longer weapon
-                                //This should only increase by a small amount from the player's current range
-                                //The increase in range should go from 0.1 to 0.25 
-                                value = player.sword_range + rng.Next(110, 250) / 1000.0;
                             }
 
                             collectibles[z].Add(new Collectible(type, value, new Point(powerupX, powerupY)));
@@ -527,11 +525,9 @@ namespace MazeT
         }
 
         private void DrawHealthBar()
-        {
-            for (int i = 0; i < player.health; i++)
-            {
-                _spriteBatch.Draw(heart_container_full, new Vector2(1 + 45 * i, 1), Color.White);
-            }
+        {            
+            _spriteBatch.Draw(heart_container_full, new Vector2(1, 1), Color.White);
+            _spriteBatch.DrawString(score_font, "x" + player.health, new Vector2(46, 0), Color.White);
         }
     }
 }
