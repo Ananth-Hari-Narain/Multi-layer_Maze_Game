@@ -13,6 +13,18 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin chest.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:chest.png
+
 #begin dwarf_icon_small.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -48,6 +60,13 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:endTPpad.png
+
+#begin fonts/score_font.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:fonts/score_font.spritefont
 
 #begin ogre_run.png
 /importer:TextureImporter
