@@ -24,8 +24,7 @@ namespace MazeT
         HEAL,
         DAMAGEUP,
         ATTACKSPEEDUP,
-        SPEEDUP,
-        SWORDRANGEUP
+        SPEEDUP
     }
 
     /// <summary>
@@ -85,14 +84,14 @@ namespace MazeT
         public bool IsAlive()
         {
             //If the collectible has expired and is not a permanent power-up
-            if (self_kill_timer < 0 && type != CollectibleType.DAMAGEUP && type != CollectibleType.SWORDRANGEUP)
+            if (self_kill_timer < 0 && type != CollectibleType.DAMAGEUP)
             {
                 return false;
             }
             return true;
         }
 
-        public void GetCollected()
+        public void BeCollected()
         {
             isCollected = true;
             if (type == CollectibleType.HEAL || type == CollectibleType.STANDARD)
