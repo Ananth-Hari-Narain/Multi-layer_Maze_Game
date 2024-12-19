@@ -13,15 +13,29 @@ namespace MazeT
 {
     public class Game1 : Game
     {
-        private static Random rng = new(); //Generate one randomiser to make numbers generated more random.
+        //Generate one randomiser to make numbers generated more random.
+        private static Random rng = new(); 
+
+        //These two variables are generated in the Monogame template
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-        private const int screen_width = 800;
-        private const int screen_height = 800;
-        private bool mazeTest = true; //testing code
-        private Vector2 prevMazePos = new Vector2();       
 
-        //These textures are used for display the minimap
+        private const int screen_width = 800;
+        private const int screen_height = 800;        
+        private Vector2 prev_maze_pos = new Vector2();
+        private KeyboardState previous_key_state;
+        private MouseState mouse_state;
+        private enum GameState
+        {
+            START_MENU = 1,
+            MAIN_GAME = 2,
+            PAUSE_IN_GAME = 3,
+            END_OF_LEVEL = 4
+        }
+
+        private GameState game_state = GameState.START_MENU;
+
+        //These textures are used for displaying the minimap
         private Texture2D wall;
         private Texture2D TPpad;
         private Texture2D minimap_bg;
@@ -40,15 +54,41 @@ namespace MazeT
         private Player player;
 
         //These are the sprite sheets used for our enemies
-        Texture2D blind_enemy_run_sheet;
-        Texture2D smart_enemy_run_sheet;
+        private Texture2D blind_enemy_run_sheet;
+        private Texture2D smart_enemy_run_sheet;
 
-        //Testing code
-        private SpriteFont testFont;
-        private Point test_point = new(0, 0);
-        private Point final_test_point = new(3, 4);
+        //These are the sprites for the collectibles
+        private Texture2D powerup;
+        private Texture2D treasure_chest;
 
-        private KeyboardState previousState;
+        //Start menu
+        private Texture2D start_screen_background;
+        private Button play_game_button;
+        private Button how_game_works_button;
+        private Button enemy_descriptions_button;
+        private Button controls_button;
+        private Texture2D how_game_works_screen;
+        private Texture2D enemy_descriptions_screen;
+        private Texture2D controls_screen;
+
+        //In-game pause menu stuff
+        private Button continue_game_button;
+        private Button quit_game_button;
+
+        enum StartMenuScreenState
+        {
+            MAIN_PAGE,
+            HOW_GAME_WORKS,
+            ENEMY_DESCRIPTION,
+            CONTROLS
+        }
+
+        StartMenuScreenState startMenuScreenState = StartMenuScreenState.MAIN_PAGE;
+
+        //In game pause menu
+
+        //Power-ups selection screen
+        
         public Game1()
         {            
             _graphics = new GraphicsDeviceManager(this);
@@ -64,35 +104,20 @@ namespace MazeT
         
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-            previousState = Keyboard.GetState();            
-            maze = new Maze(15, 15, 2);
-            player = new Player(44, 56, 0, 0, maze.collision_rects);
-            List<Point> testpath2 = maze.GenerateSingleLayerPath(new Point(3, 2), 8, 0); ;
-
-            //Initialise enemy list
-            enemies = new List<CollisionCharacter>[maze.max_layers];
-            collectibles = new List<Collectible>[maze.max_layers];
-            for (int i = 0; i < maze.max_layers; i++)
-            {
-                enemies[i] = new List<CollisionCharacter>();
-            }
-
-            //Generate enemies randomly but evenly across maze.
-            GenerateEnemies(50);
-            GenerateCollectibles(8, 3);
-            base.Initialize();            
+            previous_key_state = Keyboard.GetState();
+            player = new Player(44, 56, 0, 0);
+            base.Initialize();
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
       
-            maze.maze_wall_H = Content.Load<Texture2D>("temp_wallH");
-            maze.maze_wall_V = Content.Load<Texture2D>("temp_wallV");
-            maze.maze_floor = Content.Load<Texture2D>("temp_floor");
-            maze.tp_pad_design = Content.Load<Texture2D>("temp_pad");
-            maze.end_tp_pad_design = Content.Load<Texture2D>("endTPpad");
+            Maze.maze_wall_H = Content.Load<Texture2D>("images/temp_wallH");
+            Maze.maze_wall_V = Content.Load<Texture2D>("images/temp_wallV");
+            Maze.maze_floor = Content.Load<Texture2D>("images/temp_floor");
+            Maze.tp_pad_design = Content.Load<Texture2D>("images/TPpadsmall");
+            Maze.end_tp_pad_design = Content.Load<Texture2D>("images/endTPpad");
 
             wall = new Texture2D(GraphicsDevice, 1, 1);
             wall.SetData(new Color[] { Color.Black });
@@ -106,144 +131,205 @@ namespace MazeT
             end_goal = new Texture2D(GraphicsDevice, 1, 1);
             end_goal.SetData(new Color[] { Color.MonoGameOrange });
 
-            player_icon = Content.Load<Texture2D>("dwarf_icon_small");
-            heart_container_empty = Content.Load<Texture2D>("ui_heart_empty");
-            heart_container_full = Content.Load<Texture2D>("ui_heart_full");
+            player_icon = Content.Load<Texture2D>("images/dwarf_icon_small");
+            heart_container_empty = Content.Load<Texture2D>("images/ui_heart_empty");
+            heart_container_full = Content.Load<Texture2D>("images/ui_heart_full");
 
-            player.walk[0].sprite_sheet = Content.Load<Texture2D>("dwarf_run"); 
+            player.walk[0].sprite_sheet = Content.Load<Texture2D>("images/dwarf_run"); 
             for (int i = 1; i < 4; i++)
             {
                 player.walk[i].sprite_sheet = player.walk[0].sprite_sheet;
             }
-            player.sword_swing = Content.Load<Texture2D>("sword_swing");
+            player.sword_swing = Content.Load<Texture2D>("images/sword_swing");
 
-            blind_enemy_run_sheet = Content.Load<Texture2D>("ogre_run");
-            smart_enemy_run_sheet = Content.Load<Texture2D>("skeleton_run");
-
-            
-            for (int i = 0; i < maze.max_layers; i++)
-            {
-                //Now initialise the run AnimatedSpriteSheet for each enemy
-                foreach (var enemy in enemies[i])
-                {
-                    if (enemy is SmartEnemy smartEnemy)
-                    {
-                        smartEnemy.run[0].sprite_sheet = smart_enemy_run_sheet;
-                        smartEnemy.run[1].sprite_sheet = smart_enemy_run_sheet;
-                    }
-                    else if (enemy is BlindEnemy blind)
-                    {
-                        blind.run[0].sprite_sheet = blind_enemy_run_sheet;
-                        blind.run[1].sprite_sheet = blind_enemy_run_sheet;
-                    }
-                }
-
-                Texture2D powerup = Content.Load<Texture2D>("test_potion");
-                Texture2D chest = Content.Load<Texture2D>("chest");
-
-                //Initialise the images for the collectibles
-                foreach (Collectible collectible in collectibles[i])
-                {
-                    if (collectible.type == CollectibleType.STANDARD)
-                    {
-                        collectible.image = chest;
-                    }
-                    else
-                    {
-                        collectible.image = powerup;
-                    }                    
-                    collectible.SetRect(collectible.global_position.ToPoint());
-                }
-            }
+            blind_enemy_run_sheet = Content.Load<Texture2D>("images/ogre_run");
+            smart_enemy_run_sheet = Content.Load<Texture2D>("images/skeleton_run");
+            powerup = Content.Load<Texture2D>("images/test_potion");
+            treasure_chest = Content.Load<Texture2D>("images/chest");
 
             //Load fonts
             score_font = Content.Load<SpriteFont>("fonts/score_font");
-            testFont = Content.Load<SpriteFont>("testFont");
+
+            //Initialise buttons and UI images
+            //Start menu
+            start_screen_background = Content.Load<Texture2D>("UI_images/main_background");
+
+            play_game_button = new Button(new Point(252, 200),
+                Content.Load<Texture2D>("UI_images/play_game_button"));
+
+            how_game_works_button = new Button(new Point(252, 350),
+                Content.Load<Texture2D>("UI_images/how_game_works_button"));
+
+            how_game_works_screen = Content.Load<Texture2D>("UI_images/how_game_works_screen");
+
+            enemy_descriptions_button = new Button(new Point(252, 500),
+                Content.Load<Texture2D>("UI_images/enemy_description_button"));
+
+            controls_button = new Button(new Point(252, 650),
+                Content.Load<Texture2D>("UI_images/controls_button"));
+
+            //In game menu
+            continue_game_button = new Button(new Point(252, 300),
+                Content.Load<Texture2D>("UI_images/play_game_button")); //Pls change soon
+
+            quit_game_button = new Button(new Point(252, 500),
+                Content.Load<Texture2D>("UI_images/how_game_works_button")); //Pls change soon
         }
 
         protected override void Update(GameTime gameTime)
-        {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
-
+        {    
             KeyboardState currentKeys = Keyboard.GetState();
-            //Testing code
-            if (currentKeys.IsKeyDown(Keys.P) && !previousState.IsKeyDown(Keys.P))
-            {
-                mazeTest = !mazeTest;
-            }
-            if (currentKeys.IsKeyDown(Keys.L) && !previousState.IsKeyDown(Keys.L))
-            {
-                test_point = maze.SingleLayerNextTileFinder(test_point, final_test_point);
-            }
+            mouse_state = Mouse.GetState();
             
-            if (currentKeys.IsKeyDown(Keys.M))
+            if (game_state == GameState.MAIN_GAME)
             {
-                this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 2d);
-            }
-            else if (currentKeys.IsKeyDown(Keys.N))
-            {
-                this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 60d);
+                //Main game loop
+                player.Update(currentKeys, previous_key_state, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);
+
+                if (currentKeys.IsKeyDown(Keys.Q) && !previous_key_state.IsKeyDown(Keys.Q))
+                {
+                    HandleIfPlayerIsOnTeleportationPads();
+                }
+                HandleSideScrolling();
+                HandleEnemyLogic(gameTime); //Handles enemy code, including damage detection
+                HandleCollectibles(); //Deal with picking up and updating collectibles
+
+                maze.UpdateMazeRects(prev_maze_pos - maze.pos);
+
+                previous_key_state = Keyboard.GetState();
+                prev_maze_pos = new Vector2(maze.pos.X, maze.pos.Y);
+                player.old_global_position = player.global_position;
+
+                if (currentKeys.IsKeyDown(Keys.Escape))
+                {
+                    game_state = GameState.PAUSE_IN_GAME;
+                }
+
+                //If we have reached the end goal
+                if (false)
+                {
+                    game_state = GameState.END_OF_LEVEL;
+                }
             }
 
-            test_point.X = (int)(player.global_position.X + 98) / 128;
-            test_point.Y = (int)(player.global_position.Y + 80) / 128;     
-            //End of testing code
-            
-            //Main game loop
-            player.Update(currentKeys, previousState, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);
-            
-            if (currentKeys.IsKeyDown(Keys.Q) && !previousState.IsKeyDown(Keys.Q))
+            //Needs finishing
+            else if (game_state == GameState.START_MENU)
             {
-                HandleIfPlayerIsOnTeleportationPads();
-            }
-            HandleSideScrolling();
-            HandleEnemyLogic(gameTime); //Handles enemy code, including damage detection
-            HandleCollectibles(); //Deal with picking up and updating collectibles
+                if (startMenuScreenState == StartMenuScreenState.MAIN_PAGE)
+                {
+                    if (mouse_state.LeftButton == ButtonState.Pressed)
+                    {
+                        if (play_game_button.IsMouseOnButton(mouse_state.Position))
+                        {
+                            //Start Game                        
+                            GenerateFullMaze();
+                            game_state = GameState.MAIN_GAME;
+                        }
+                        else if (how_game_works_button.IsMouseOnButton(mouse_state.Position))
+                        {
+                            startMenuScreenState = StartMenuScreenState.HOW_GAME_WORKS;
+                        }
+                        //else if (enemy_descriptions_button.IsMouseOnButton(mouse_state.Position))
+                        //{
+                        //    startMenuScreenState = StartMenuScreenState.ENEMY_DESCRIPTION;
+                        //}
+                        //else if (controls_button.IsMouseOnButton(mouse_state.Position))
+                        //{
+                        //    startMenuScreenState = StartMenuScreenState.CONTROLS;
+                        //}
+                    }                    
+                }
+                else
+                {
+                    if (currentKeys.IsKeyDown(Keys.Escape))
+                    {
+                        startMenuScreenState = StartMenuScreenState.MAIN_PAGE;
+                    }
+                }
+            }       
             
+            else if (game_state == GameState.PAUSE_IN_GAME)
+            {
+                //Check if user is clicking one of the buttona
+                if (mouse_state.LeftButton == ButtonState.Pressed)
+                {
+                    if (continue_game_button.IsMouseOnButton(mouse_state.Position))
+                    {
+                        game_state = GameState.MAIN_GAME;
+                    }
 
-            maze.UpdateMazeRects(prevMazePos - maze.pos);
-
-            previousState = Keyboard.GetState();
-            prevMazePos = new Vector2(maze.pos.X, maze.pos.Y);
-            player.old_global_position = player.global_position;
+                    else
+                    {
+                        game_state = GameState.START_MENU;
+                    }
+                }
+            }
+            
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
+            //Clear the screen so we can redraw on it
             GraphicsDevice.Clear(Color.LightGray);
-            // TODO: Add your drawing code here
+            
             _spriteBatch.Begin();
-            if (mazeTest)
+
+            if (game_state == GameState.MAIN_GAME)
             {
                 maze.DisplayMaze(_spriteBatch);
-            }
-            else{
-                maze.DisplayRects(_spriteBatch, wall);
-            }
-            //_spriteBatch.Draw(TPpad, player.collision_rect, Color.White);
-            _spriteBatch.DrawString(testFont,
-                $"\nplayer health: {player.health}",
-                new Vector2(0, 600), Color.White);
-            //maze.DrawPath(testpath, _spriteBatch,TPpad);
-            _spriteBatch.Draw(TPpad, player.sword_hitbox, Color.White);
-            player.Display(_spriteBatch);            
-            foreach (var enemy in enemies[maze.current_layer])
-            {                
-                if (enemy.health > 0)
-                {                    
-                    enemy.Display(_spriteBatch);
-                }                
-            }
+                player.Display(_spriteBatch);
+                foreach (var enemy in enemies[maze.current_layer])
+                {
+                    if (enemy.health > 0)
+                    {
+                        enemy.Display(_spriteBatch);
+                    }
+                }
 
-            foreach (Collectible collectible in collectibles[maze.current_layer])
+                foreach (Collectible collectible in collectibles[maze.current_layer])
+                {
+                    collectible.Display(_spriteBatch);
+                }
+
+                maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg, wall, TPpad, player_icon, player.global_position, end_goal);
+                DrawHealthBar();                
+            }
+            else if (game_state == GameState.START_MENU)
             {
-                collectible.Display(_spriteBatch);
+                //Draw start menu
+                if (startMenuScreenState == StartMenuScreenState.MAIN_PAGE)
+                {
+                    _spriteBatch.Draw(start_screen_background, new Rectangle(0, 0, screen_width, screen_height), Color.White);
+                    play_game_button.Display(_spriteBatch);
+                    how_game_works_button.Display(_spriteBatch);
+                    enemy_descriptions_button.Display(_spriteBatch);
+                    controls_button.Display(_spriteBatch);
+                }
+                else if (startMenuScreenState == StartMenuScreenState.HOW_GAME_WORKS)
+                {
+                    _spriteBatch.Draw(how_game_works_screen,
+                        new Rectangle(Point.Zero, new Point(screen_width, screen_height)),
+                        Color.White);
+                }
+                else if (startMenuScreenState == StartMenuScreenState.ENEMY_DESCRIPTION)
+                {
+                    _spriteBatch.Draw(enemy_descriptions_screen,
+                        new Rectangle(Point.Zero, new Point(screen_width, screen_height)),
+                        Color.White);
+                }
+                else
+                {
+                    _spriteBatch.Draw(controls_screen,
+                        new Rectangle(Point.Zero, new Point(screen_width, screen_height)),
+                        Color.White);
+                }
             }
-
-            maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg ,wall, TPpad, player_icon, player.global_position, end_goal);
-            DrawHealthBar();
+            else if (game_state == GameState.PAUSE_IN_GAME)
+            {
+                continue_game_button.Display(_spriteBatch);
+                quit_game_button.Display(_spriteBatch);
+            }
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -255,7 +341,6 @@ namespace MazeT
         /// cannot spawn on the same tile, as enemies stacked on top of each
         /// other may confuse the user.
         /// </summary>
-
         private void GenerateEnemies(int noEnemiesPerLayer)
         {
             //Determine the size of each "chunk". Every chunk is a square region
@@ -299,7 +384,7 @@ namespace MazeT
         }
 
         /// <summary>
-        /// Generates collectibles across maze.
+        /// Generates collectibles uniformly across maze.
         /// </summary>
         private void GenerateCollectibles(int num_powerups_per_layer, int num_standard_collectibles_per_layer)
         {
@@ -431,6 +516,60 @@ namespace MazeT
                 }
             }             
 
+        }
+
+        /// <summary>
+        /// Generates one full maze with all the collectibles and enemies. This will be run to generate each new level.
+        /// </summary>
+        private void GenerateFullMaze()
+        {
+            maze = new Maze(15, 15, 2);
+            player.ResetPlayerForNextLevel(0, 0, maze.collision_rects);
+
+            //Initialise enemy list
+            enemies = new List<CollisionCharacter>[maze.max_layers];
+            collectibles = new List<Collectible>[maze.max_layers];
+            for (int i = 0; i < maze.max_layers; i++)
+            {
+                enemies[i] = new List<CollisionCharacter>();
+            }
+
+            //Generate enemies randomly but evenly across maze.
+            GenerateEnemies(50);
+            GenerateCollectibles(8, 3);
+
+            //Now give each of the enemies and collectibles a sprite or spritesheet
+            for (int i = 0; i < maze.max_layers; i++)
+            {
+                //Now initialise the run AnimatedSpriteSheet for each enemy
+                foreach (var enemy in enemies[i])
+                {
+                    if (enemy is SmartEnemy smartEnemy)
+                    {
+                        smartEnemy.run[0].sprite_sheet = smart_enemy_run_sheet;
+                        smartEnemy.run[1].sprite_sheet = smart_enemy_run_sheet;
+                    }
+                    else if (enemy is BlindEnemy blind)
+                    {
+                        blind.run[0].sprite_sheet = blind_enemy_run_sheet;
+                        blind.run[1].sprite_sheet = blind_enemy_run_sheet;
+                    }
+                }                
+
+                //Initialise the images for the collectibles
+                foreach (Collectible collectible in collectibles[i])
+                {
+                    if (collectible.type == CollectibleType.STANDARD)
+                    {
+                        collectible.image = treasure_chest;
+                    }
+                    else
+                    {
+                        collectible.image = powerup;
+                    }
+                    collectible.SetRect(collectible.global_position.ToPoint());
+                }
+            }
         }
 
         private void HandleSideScrolling()

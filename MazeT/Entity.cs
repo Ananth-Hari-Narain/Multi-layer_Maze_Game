@@ -215,8 +215,12 @@ namespace MazeT
         private int internal_anim_timer = 0;
         private int internal_iframes_timer = 0;
 
+        private FacingDirections direction = FacingDirections.NORTH;
+        private PlayerState player_state = PlayerState.IDLE;
+
         private int walking_speed = 2;
         private int running_speed = 4;
+
         private List<Collectible> collectibles;
         
         public Rectangle sword_hitbox;
@@ -227,12 +231,11 @@ namespace MazeT
         private int sword_cooldown_timer; //Records how long there is till the next sword can be used.
         private int sword_cooldown_length = 300; //This is the length of time between sword attacks.
         public Vector2 old_global_position; //This is used for the side scrolling code
-
-        private FacingDirections direction = FacingDirections.NORTH;
-        private PlayerState player_state = PlayerState.IDLE;
-        public Player(int width, int height, int x, int y, List<Rectangle>[] wall_rects)
+        
+        //This will only be run when you boot up the game. Between levels, we will use a
+        //different method to adjust the necessary variables.
+        public Player(int width, int height, int x, int y)
         {
-            CollisionCharacter.wall_rects = wall_rects;
             health = 5;
             power = 1;
             coll_rect_offset = new Vector2(43, 72);
@@ -246,6 +249,17 @@ namespace MazeT
             }
 
             collectibles = new(); //Initialise collectibles
+        }
+
+        public void ResetPlayerForNextLevel(int x, int y, List<Rectangle>[] wall_rects)
+        {
+            CollisionCharacter.wall_rects = wall_rects;
+            collision_rect.Location = new Point(x + 43, y + 72);
+            global_position = new Vector2(x, y);
+            if (health < 5)
+            {
+                health = 5;
+            }
         }
 
         public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, int time_elapsed)
@@ -535,7 +549,7 @@ namespace MazeT
             collectibles.Add(collectible);
         }
 
-        public void UseCollectibles(int time_elapsed, Vector2 maze_pos) 
+        private void UseCollectibles(int time_elapsed, Vector2 maze_pos) 
         {            
             for (int i = 0; i < collectibles.Count; i++)
             {

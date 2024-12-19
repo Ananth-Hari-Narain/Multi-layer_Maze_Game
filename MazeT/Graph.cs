@@ -105,13 +105,11 @@ namespace MazeT
         public int current_layer;
         public int max_layers;
 
-        public Texture2D maze_wall_H;
-        public Texture2D maze_wall_V;
-        public Texture2D maze_floor;
-        public Texture2D tp_pad_design;
-        public Texture2D end_tp_pad_design;
-        private Rectangle[] wallRects; //to help divide up the sprite sheet
-        private Rectangle[] floorRects; //to help divide up the sprite sheet
+        static public Texture2D maze_wall_H;
+        static public Texture2D maze_wall_V;
+        static public Texture2D maze_floor;
+        static public Texture2D tp_pad_design;
+        static public Texture2D end_tp_pad_design;
         public List<Rectangle>[] collision_rects;
         public List<Rectangle>[] TP_Pads;        
         
