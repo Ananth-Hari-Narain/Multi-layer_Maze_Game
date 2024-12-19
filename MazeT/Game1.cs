@@ -20,11 +20,14 @@ namespace MazeT
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        //General variables
         private const int screen_width = 800;
         private const int screen_height = 800;        
         private Vector2 prev_maze_pos = new Vector2();
         private KeyboardState previous_key_state;
         private MouseState mouse_state;
+        private int noLevelsBeaten = 0;
+
         private enum GameState
         {
             START_MENU = 1,
@@ -74,6 +77,15 @@ namespace MazeT
         //In-game pause menu stuff
         private Button continue_game_button;
         private Button quit_game_button;
+
+        //Power up menu
+        private Button powerup_box_1;
+        private Button powerup_box_2;
+        private Button powerup_box_3;
+        private int num_powerups_boxes_left;
+        private int num_enemies_killed_this_level;
+        private int num_treasure_chests_collected;
+        private int total_treasure_chests_this_level;
 
         enum StartMenuScreenState
         {
@@ -185,7 +197,6 @@ namespace MazeT
             {
                 //Main game loop
                 player.Update(currentKeys, previous_key_state, maze.pos, maze.current_layer, gameTime.ElapsedGameTime.Milliseconds);
-
                 if (currentKeys.IsKeyDown(Keys.Q) && !previous_key_state.IsKeyDown(Keys.Q))
                 {
                     HandleIfPlayerIsOnTeleportationPads();
@@ -205,8 +216,10 @@ namespace MazeT
                     game_state = GameState.PAUSE_IN_GAME;
                 }
 
-                //If we have reached the end goal
-                if (false)
+                //If we have reached the end goal and are pressing Q
+                if (maze.end_goal.Intersects(player.collision_rect) 
+                    && maze.current_layer == 0
+                    && currentKeys.IsKeyDown(Keys.Q))
                 {
                     game_state = GameState.END_OF_LEVEL;
                 }
@@ -222,7 +235,7 @@ namespace MazeT
                         if (play_game_button.IsMouseOnButton(mouse_state.Position))
                         {
                             //Start Game                        
-                            GenerateFullMaze();
+                            GenerateLevel();
                             game_state = GameState.MAIN_GAME;
                         }
                         else if (how_game_works_button.IsMouseOnButton(mouse_state.Position))
@@ -248,6 +261,7 @@ namespace MazeT
                 }
             }       
             
+            //Might need a settings button as well
             else if (game_state == GameState.PAUSE_IN_GAME)
             {
                 //Check if user is clicking one of the buttona
@@ -263,6 +277,14 @@ namespace MazeT
                         game_state = GameState.START_MENU;
                     }
                 }
+            }
+
+            //Needs power up screen
+            else if (game_state == GameState.END_OF_LEVEL)
+            {
+                noLevelsBeaten++;
+                GenerateLevel();
+                game_state = GameState.MAIN_GAME;
             }
             
             base.Update(gameTime);
@@ -293,7 +315,8 @@ namespace MazeT
                 }
 
                 maze.DisplayTopCornerMinimapImage(_spriteBatch, minimap_bg, wall, TPpad, player_icon, player.global_position, end_goal);
-                DrawHealthBar();                
+                DrawHealthBar();
+                DrawTreasureChestBar();
             }
             else if (game_state == GameState.START_MENU)
             {
@@ -363,19 +386,24 @@ namespace MazeT
                         int enemyY = rng.Next(y, Math.Min(maze.height, y + chunk_width));                        
 
                         //Determine which enemy to choose based on settings
-                        //For now, just do random between blind enemy and actual enemy
+                        //For now, we only need to choose randomly between the blind and smart enemy
                         int random_number = rng.Next(0,2);
+                        //We also want to choose a level for the enemy to determine their strength
+                        //We want a distribution that favours higher levels (so if we have beaten 4 levels,
+                        //we want most enemies to be level 3 or 4). To do this, I have opted to generate
+                        //two random numbers and find their average.
+                        int enemy_level = rng.Next(1, noLevelsBeaten+1) + rng.Next(noLevelsBeaten/2, noLevelsBeaten+1);
                         if (random_number == 0)
-                        {
+                        {                            
                             //Spawn a blind enemy
-                            enemies[z].Add(new BlindEnemy(1, maze.GenerateSingleLayerPath(new Point(enemyX, enemyY), 8, z)));
+                            enemies[z].Add(new BlindEnemy(enemy_level, maze.GenerateSingleLayerPath(new Point(enemyX, enemyY), 8, z)));
                         }
                         else
                         {
                             //Spawn a smart enemy
                             //Convert the random point into coordinates
                             Vector2 enemy_location = new(enemyX * 128 + 30, enemyY * 128 + 30);                            
-                            enemies[z].Add(new SmartEnemy(1, enemy_location, ref maze));
+                            enemies[z].Add(new SmartEnemy(enemy_level, enemy_location, ref maze));
                         }
 
                     }
@@ -384,11 +412,12 @@ namespace MazeT
         }
 
         /// <summary>
-        /// Generates collectibles uniformly across maze.
+        /// Generates collectibles uniformly across maze. Returns the number of treasure
+        /// chests generated in the level
         /// </summary>
-        private void GenerateCollectibles(int num_powerups_per_layer, int num_standard_collectibles_per_layer)
+        private int GenerateCollectibles(int num_powerups_per_layer, int num_treasure_chests_per_layer)
         {
-            double chunk_area = maze.width * maze.height / (double) (num_powerups_per_layer + num_standard_collectibles_per_layer);
+            double chunk_area = maze.width * maze.height / (double) (num_powerups_per_layer + num_treasure_chests_per_layer);
             //We use the ceiling here to ensure all parts of the maze are covered.
             int chunk_width = (int)Math.Ceiling(Math.Sqrt(chunk_area));
             //Initialise collectibles[] array
@@ -397,11 +426,13 @@ namespace MazeT
                 collectibles[i] = new();
             }
 
-            //Actual code
+            //We need to ensure we know exactly how many treasure chests are in this level
+            int treasure_chest_count = 0;
+
             //Place power ups in random dead ends across both floors
             for (int z = 0; z < maze.max_layers; z++)
             {
-                int num_standard_collectibles_in_this_layer = 0;
+                int num_treasure_chests_in_this_layer = 0;
                 HashSet<Point> dead_ends = maze.GetDeadEnds(z);
                 //Iterate through each chunk. Choose only the dead ends (if there are dead ends in the chunk)
                 for (int x = 0; x < maze.width; x += chunk_width)
@@ -430,10 +461,10 @@ namespace MazeT
                             chosen_point.X = chosen_point.X * 128 + 32;
                             chosen_point.Y = chosen_point.Y * 128 + 32;
 
-                            //Determine the type and value of the collectible. We can have standard collectibles now
+                            //Determine the type and value of the collectible. We can have treasure chests now
                             //provided we have not generated all of them yet
                             CollectibleType type;
-                            if (num_standard_collectibles_per_layer > num_standard_collectibles_in_this_layer)
+                            if (num_treasure_chests_per_layer > num_treasure_chests_in_this_layer)
                             {
                                 type = (CollectibleType)rng.Next(0, 5);
                             }
@@ -444,9 +475,10 @@ namespace MazeT
                              
                             double value = 0;
                             //Determine a value for them
-                            if (type == CollectibleType.STANDARD)
+                            if (type == CollectibleType.TREASURE_CHEST)
                             {
-                                value = 1;//Doesn't matter for standard collectibles
+                                value = 1;//Doesn't matter for treasure chests
+                                treasure_chest_count++;
                             }
                             else if (type == CollectibleType.HEAL)
                             {
@@ -484,7 +516,7 @@ namespace MazeT
                             powerupY = powerupY * 128 + 32;
 
                             //Determine the power up type (there are 4 different types which aren't
-                            //standard types).
+                            // treasure chests).
                             CollectibleType type = (CollectibleType)rng.Next(1, 5);
                             double value = 0;
                             //Determine a value for them
@@ -513,18 +545,30 @@ namespace MazeT
                             collectibles[z].Add(new Collectible(type, value, new Point(powerupX, powerupY)));
                         }
                     }
-                }
-            }             
-
+                }               
+            }
+            return treasure_chest_count;
         }
 
         /// <summary>
         /// Generates one full maze with all the collectibles and enemies. This will be run to generate each new level.
         /// </summary>
-        private void GenerateFullMaze()
+        private void GenerateLevel()
         {
-            maze = new Maze(15, 15, 2);
+            //The maze should start small but get larger as you progress
+            //It will start with a 10x10 but expand as you progress all the way
+            //to a 15 x 15.
+            int maze_size = 10 + noLevelsBeaten;
+            if (maze_size > 15)
+            {
+                maze_size = 15;
+            }
+            maze = new Maze(maze_size, maze_size, 2);
+            prev_maze_pos = Vector2.Zero; //Reset this variable
+            
             player.ResetPlayerForNextLevel(0, 0, maze.collision_rects);
+            num_enemies_killed_this_level = 0;
+            num_treasure_chests_collected = 0;
 
             //Initialise enemy list
             enemies = new List<CollisionCharacter>[maze.max_layers];
@@ -533,10 +577,18 @@ namespace MazeT
             {
                 enemies[i] = new List<CollisionCharacter>();
             }
+            
+            //Determine how many enemies to generate in the maze. We want at most
+            //90 enemies as otherwise it becomes too much.
+            int num_enemies= 10 * (noLevelsBeaten + 1);
+            if (num_enemies > 90)
+            {
+                num_enemies = 90;
+            }
 
-            //Generate enemies randomly but evenly across maze.
-            GenerateEnemies(50);
-            GenerateCollectibles(8, 3);
+            //Generate enemies and collectibles randomly but evenly across maze.
+            GenerateEnemies(num_enemies);
+            total_treasure_chests_this_level = GenerateCollectibles(8, 3);
 
             //Now give each of the enemies and collectibles a sprite or spritesheet
             for (int i = 0; i < maze.max_layers; i++)
@@ -559,7 +611,7 @@ namespace MazeT
                 //Initialise the images for the collectibles
                 foreach (Collectible collectible in collectibles[i])
                 {
-                    if (collectible.type == CollectibleType.STANDARD)
+                    if (collectible.type == CollectibleType.TREASURE_CHEST)
                     {
                         collectible.image = treasure_chest;
                     }
@@ -635,6 +687,11 @@ namespace MazeT
                     if (player.sword_hitbox.Intersects(enemy.collision_rect))
                     {
                         enemy.TakeDamage(player.power, player.sword_hitbox.Center);
+                        //If the player kills the enemy
+                        if (enemy.health <= 0)
+                        {
+                            num_enemies_killed_this_level++;
+                        }
                     }
                     //If the player succesfully hit the enemy, the player should not take damage
                     // from that enemy
@@ -657,7 +714,11 @@ namespace MazeT
                 //If the collectible intersects with the player, collect the collectible
                 if (collectibles[maze.current_layer][i].rect.Intersects(player.collision_rect))
                 {
-                    player.CollectCollectible(collectibles[maze.current_layer][i]);
+                    player.CollectCollectible(collectibles[maze.current_layer][i]);                    
+                    if (collectibles[maze.current_layer][i].type == CollectibleType.TREASURE_CHEST)
+                    {
+                        num_treasure_chests_collected++;
+                    }
                     collectibles[maze.current_layer].RemoveAt(i);
                 }                
             }
@@ -667,6 +728,12 @@ namespace MazeT
         {            
             _spriteBatch.Draw(heart_container_full, new Vector2(1, 1), Color.White);
             _spriteBatch.DrawString(score_font, "x" + player.health, new Vector2(46, 0), Color.White);
+        }
+
+        private void DrawTreasureChestBar()
+        {
+            _spriteBatch.Draw(treasure_chest, new Rectangle(300, -5, 40, 40), Color.White);
+            _spriteBatch.DrawString(score_font, $"{num_treasure_chests_collected}/{total_treasure_chests_this_level}", new Vector2(343, 3), Color.White);
         }
     }
 }

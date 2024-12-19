@@ -20,7 +20,7 @@ namespace MazeT
 
     enum CollectibleType
     {
-        STANDARD,
+        TREASURE_CHEST,
         HEAL,
         DAMAGEUP,
         ATTACKSPEEDUP,
@@ -94,7 +94,7 @@ namespace MazeT
         public void BeCollected()
         {
             isCollected = true;
-            if (type == CollectibleType.HEAL || type == CollectibleType.STANDARD)
+            if (type == CollectibleType.HEAL || type == CollectibleType.TREASURE_CHEST)
             {
                 //This collectible "dies" instantly as it is a one use item
                 self_kill_timer = 1; 

@@ -111,7 +111,8 @@ namespace MazeT
         static public Texture2D tp_pad_design;
         static public Texture2D end_tp_pad_design;
         public List<Rectangle>[] collision_rects;
-        public List<Rectangle>[] TP_Pads;        
+        public List<Rectangle>[] TP_Pads;
+        public Rectangle end_goal; //This represents the hitbox for the end of the level.
         
         public Vector2 pos = Vector2.Zero; // Global poisition of top left corner of maze
         public int xmax;
@@ -131,7 +132,7 @@ namespace MazeT
             WilsonAlgorithm();
             xmax = tileSize * width - (int)pos.X;
             ymax = tileSize * height - (int)pos.Y;
-
+            pos = Vector2.Zero;
             //Initialise the collision rect array
             for (int z = 0; z < max_layers; z++)
             {
@@ -471,7 +472,7 @@ namespace MazeT
                         spriteBatch.Draw(tp_pad_design, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
                     }
 
-                    if (x == width-1 && y == width - 1)
+                    if (x == width-1 && y == width - 1 && current_layer == 0)
                     {
                         spriteBatch.Draw(end_tp_pad_design, new Vector2(x * tile_size_y - pos.X, y * tile_size_x + tile_segment_width - pos.Y), Color.White);
                     }
@@ -575,6 +576,13 @@ namespace MazeT
                     }                    
                 }
             }
+
+            //Add the end goal
+            end_goal = new Rectangle(
+                                (width - 1) * 128,
+                                (height - 1) * 128 + 64,
+                                60,
+                                60);
         } 
 
         /// <summary>
@@ -604,6 +612,9 @@ namespace MazeT
                     TP_Pads[z][i] = rect;
                 }
             }
+
+            //Update end goal rectangle
+            end_goal.Offset(deltaPos);            
         }        
         
         //This function will return one random path that starts at a specified point.

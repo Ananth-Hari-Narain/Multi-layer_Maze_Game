@@ -612,11 +612,31 @@ namespace MazeT
         private bool is_facing_left = true;
         private int being_hit_timer = 0;
 
-        public BlindEnemy(int current_level, List<Point> path)
+        public BlindEnemy(int enemy_level, List<Point> path)
         {
-            //Subject to change
-            health = 90;
-            power = current_level;
+            //Calculate health of enemy based on level
+            if (enemy_level < 3)
+            {
+                health = 10;
+            }
+            else if (enemy_level < 5)
+            {
+                health = 20;
+            }
+            else
+            {
+                health = 30;
+            }
+            
+            //Calculate enemy's power based on level
+            if (enemy_level < 4)
+            {
+                power = 1;
+            }
+            else {
+                power = 2;
+            }
+            
             run.Initialize();
             //Path should be determined in the Game1.cs to help
             //avoid conflicting paths
@@ -773,10 +793,36 @@ namespace MazeT
         private Vector2 destination;
         private static Maze maze_copy; //This is needed for the path finding algorithm
 
-        public SmartEnemy(int current_level, Vector2 initial_pos, ref Maze maze)
+        public SmartEnemy(int enemy_level, Vector2 initial_pos, ref Maze maze)
         {
-            health = 5;
-            power = 2;
+            //Calculate health of enemy based on level
+            if (enemy_level < 3)
+            {
+                health = 5;
+            }
+            else if (enemy_level < 5)
+            {
+                health = 8;
+            }
+            else
+            {
+                health = 16;
+            }
+
+            //Calculate enemy's power based on level
+            if (enemy_level < 3)
+            {
+                power = 1;
+            }
+            else if (enemy_level < 5)
+            {
+                power = 2;
+            }
+            else
+            {
+                power = 3;
+            }
+
             global_position = initial_pos;
             destination = new(-2, -2);
             collision_rect.Width = 40;
