@@ -663,7 +663,11 @@ namespace MazeT
             {
                 if (player.collision_rect.Intersects(rect))
                 {
+                    //Works well for two layers, which is what I have decided for this game
                     maze.current_layer = (maze.current_layer + 1) % maze.max_layers;
+                    //Give the player a little window of invincibility so they can't get jumped 
+                    //by enemies on the TP pads
+                    player.TakeDamage(0);
                 }
             }
         }
