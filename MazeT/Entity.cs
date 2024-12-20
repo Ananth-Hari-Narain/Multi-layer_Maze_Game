@@ -546,7 +546,35 @@ namespace MazeT
         public void CollectCollectible(Collectible collectible)
         {
             collectible.BeCollected();
-            collectibles.Add(collectible);
+            //Ensure power up actually improves player's stats (if they collected a stronger power up before, don't
+            //replace that with a weaker powerup). We only need to worry about this for damage up, speed up or
+            //attack speed up power-ups
+            if (collectible.type == CollectibleType.DAMAGEUP 
+                || collectible.type == CollectibleType.SPEEDUP
+                || collectible.type == CollectibleType.ATTACKSPEEDUP)
+            {
+                //Firstly, dispose of the weaker powerups.
+                if (collectible.type == CollectibleType.DAMAGEUP
+                || collectible.type == CollectibleType.SPEEDUP)
+                {
+                    collectibles.RemoveAll(item => item.value <= collectible.value && item.type == collectible.type);
+                }
+                else if (collectible.type == CollectibleType.ATTACKSPEEDUP)
+                {
+                    //Since attack speed up is based on the milliseconds between attacks, a lower value means faster attacks.
+                    //This is the opposite of the above two where a higher value = a stronger potion.
+                    collectibles.RemoveAll(item => item.value >= collectible.value && item.type == CollectibleType.ATTACKSPEEDUP);
+                }
+
+                //Now we need to find if there is another damage-up or speed-up power up in the list
+                //If there is, it must be stronger than the current power up (else it would have been removed)
+                //and so we don't add the new power up. Otherwise, we can add the new power-up.                
+                if (!collectibles.Exists(item => item.type == collectible.type))
+                {
+                    collectibles.Add(collectible);
+                }
+            }       
+            
         }
 
         private void UseCollectibles(int time_elapsed, Vector2 maze_pos) 
