@@ -528,7 +528,7 @@ namespace MazeT
             }            
         }
 
-        public void TakeDamage(int damage_taken = 1)
+        public void TakeDamage(int damage_taken = 1, int iframe_length = 2000)
         {
             //If the player is not invincible
             if (internal_iframes_timer <= 0)
@@ -538,7 +538,7 @@ namespace MazeT
 
                 //Activate invincibility frames
                 //2 seconds of invulnerability
-                internal_iframes_timer = 2000;
+                internal_iframes_timer = iframe_length;
             }
             
         }
