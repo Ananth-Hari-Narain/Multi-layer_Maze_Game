@@ -701,11 +701,12 @@ namespace MazeT
                 global_position.Y += velocity.Y;
 
             }
+
             //If the enemy has been hit recently
             else
             {
                 //Reduce the speed exponentially.
-                velocity /= 1.05f;
+                velocity /= 1.08f;
                 being_hit_timer -= time_elapsed;
 
                 //Update X coords and do collision handling function
@@ -717,6 +718,39 @@ namespace MazeT
                 collision_rect.Offset(0, velocity.Y);
                 global_position.Y += velocity.Y;
                 HandleWallCollision(maze_layer, false);
+
+                //If the enemy has recovered
+                if (being_hit_timer <= 0)
+                {
+                    int min_dist_index = 0;
+                    float min_dist = float.MaxValue;
+                    //Recalculate the nearest point in the path
+                    for (int i = 0; i < path.Count; i++)
+                    {
+                        float dist_from_point = Vector2.DistanceSquared(path[i].ToVector2(), global_position);
+                        if (dist_from_point < min_dist)
+                        {
+                            min_dist_index = i;
+                            min_dist = dist_from_point;
+                        }
+                    }
+
+                    //Now set the target as the nearest point
+                    //Determine which way the enemy was walking
+
+                    //If enemy is walking "forward" on path
+                    if (prev_target_index < target_index)
+                    {
+                        prev_target_index = min_dist_index - 1;
+                        target_index = min_dist_index;
+                    }
+                    //If enemy is walking back along the path
+                    else
+                    {
+                        prev_target_index = min_dist_index + 1;
+                        target_index = min_dist_index;
+                    }
+                }
             }           
 
             //Decide facing direction only if the enemy is not being hit
@@ -872,7 +906,9 @@ namespace MazeT
             //The centre of the player is not quite (0,0), so there is a bit of an offset.
             //Hence we add the vector (55, 8) to the player's position and then divide it.
             Point player_tile = new((int)(player_pos.X + 55) / 128, (int)(player_pos.Y + 8) / 128);
-            Point enemy_tile = new((int)global_position.X / 128, (int)global_position.Y / 128);
+            Point enemy_tile = new(
+                (int)(global_position.X + collision_rect.Width/2) / 128, 
+                (int)(global_position.Y +collision_rect.Height/2) / 128);
 
             //Start attacking the player if either the enemy gets hit by the player or the player gets 
             //on the same tile as the player
