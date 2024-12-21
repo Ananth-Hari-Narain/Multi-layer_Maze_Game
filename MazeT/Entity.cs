@@ -24,14 +24,7 @@ namespace MazeT
         /// If 1, it indicates the order is 1, 2, 3, 2, 1, 2, 3
         /// If -1, it indicates the same as above.
         /// </summary>
-        private int _orderOfSprites; 
-        
-        public AnimatedSpriteSheet(Rectangle[] rects, int order, int startingIndex = 0)
-        {
-            _orderOfSprites = order;
-            _animationIndex = startingIndex;
-            _drawingBounds = rects;
-        }
+        private int _orderOfSprites;
         
         //Assuming that sprites are going across and not vertically down
         //This constructor is used to automatically create the bounding rectangles array.
@@ -528,7 +521,7 @@ namespace MazeT
             }            
         }
 
-        public void TakeDamage(int damage_taken = 1, int iframe_length = 2000)
+        public void TakeDamage(int damage_taken, int iframe_length = 2000)
         {
             //If the player is not invincible
             if (internal_iframes_timer <= 0)

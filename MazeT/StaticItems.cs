@@ -43,7 +43,7 @@ namespace MazeT
 
         public CollectibleType type;
         public double value;
-        public bool isCollected;
+        private bool is_collected;
         //This is used to determine how long the collectible will last once it has been collected.
         private int self_kill_timer;
         public Vector2 global_position;
@@ -64,7 +64,7 @@ namespace MazeT
 
         public void Update(int time_elapsed, Vector2 maze_pos)
         {
-            if (isCollected)
+            if (is_collected)
             {
                 self_kill_timer -= time_elapsed;
             }
@@ -93,7 +93,7 @@ namespace MazeT
 
         public void BeCollected()
         {
-            isCollected = true;
+            is_collected = true;
             if (type == CollectibleType.HEAL || type == CollectibleType.TREASURE_CHEST)
             {
                 //This collectible "dies" instantly as it is a one use item
@@ -107,7 +107,7 @@ namespace MazeT
 
         public override void Display(SpriteBatch spritebatch)
         {
-            if (!isCollected)
+            if (!is_collected)
             {
                 base.Display(spritebatch);
             }

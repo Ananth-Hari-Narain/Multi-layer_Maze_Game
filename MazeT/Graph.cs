@@ -64,11 +64,6 @@ namespace MazeT
             tileConnections = new bool[] { false, false, false, false, false, false };
         }
 
-        public Tile(bool[] tileConnections)
-        {
-            this.tileConnections = tileConnections;
-        }
-
         public Tile(bool up, bool down, bool left, bool right, bool below, bool above)
         {
             tileConnections = new bool[] { up, down, left, right, below, above };
@@ -129,7 +124,7 @@ namespace MazeT
             _tiles = new Tile[width, height, layers]; //2 layer maze
             collision_rects = new List<Rectangle>[max_layers];
             TP_Pads = new List<Rectangle>[max_layers];
-            WilsonAlgorithm();
+            GenerateMaze();
             xmax = tileSize * width - (int)pos.X;
             ymax = tileSize * height - (int)pos.Y;
             pos = Vector2.Zero;
@@ -162,7 +157,7 @@ namespace MazeT
         }
 
         //Generates the maze
-        private void WilsonAlgorithm()
+        private void GenerateMaze()
         {
             Tile[,,] currentWalk = new Tile[width, height, max_layers];
             bool[,,] isVisited = new bool[width, height, max_layers];
@@ -720,16 +715,7 @@ namespace MazeT
                 }
                 all_paths.Add(newPath);
             }            
-        }
-        //public string DrawPath(List<Point> path)
-        //{
-        //    string output = "";
-        //    foreach (Point p in path)
-        //    {
-        //        output += $"({p.X / 128},{p.Y /128}) ";
-        //    }
-        //    return output;
-        //}
+        }        
 
         //Calculate shortest path between two points on the maze and return the next point in the path.
         //Note that these points are NOT coordinates on the screen
@@ -956,61 +942,6 @@ namespace MazeT
                 }
             }
             return dead_ends;
-        }
-        
-
-        /// <summary>
-        /// This is a tester function that will display the rectangles.
-        /// </summary>
-        public void DisplayRects(SpriteBatch spriteBatch, Texture2D rectColour)
-        {
-            foreach (Rectangle rect in collision_rects[current_layer])
-            {
-                spriteBatch.Draw(rectColour, rect, Color.White);
-            }
-        }
-
-        //Tester function to see if a path is correctly determined.
-        public void DrawPath(List<Point> path, SpriteBatch spriteBatch, Texture2D colour)
-        {
-            int height;
-            int width;
-            int top;
-            int left;
-            for (int i = 1; i < path.Count; i++)
-            {
-                if (path[i].Y < path[i - 1].Y)
-                {
-                    width = 20;
-                    height = 128;
-                    top = path[i].Y - (int)pos.Y;
-                    left = path[i].X - (int)pos.X;
-                }
-                else if (path[i].Y > path[i - 1].Y)
-                {
-                    width = 20;
-                    height = 128;
-                    top = path[i - 1].Y - (int)pos.Y;
-                    left = path[i - 1].X - (int)pos.X;
-                }
-                else if (path[i].X < path[i - 1].X)
-                {
-                    width = 128;
-                    height = 20;
-                    left = path[i].X - (int)pos.X;
-                    top = path[i].Y - (int)pos.Y;
-                }
-
-                else
-                {
-                    width = 128;
-                    height = 20;
-                    left = path[i - 1].X - (int)pos.X;
-                    top = path[i - 1].Y - (int)pos.Y;
-                }
-
-                spriteBatch.Draw(colour, new Rectangle(left, top, width, height), Color.White);
-            }
-        }
+        }        
     }
 }

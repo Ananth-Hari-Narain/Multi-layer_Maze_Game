@@ -588,7 +588,7 @@ namespace MazeT
 
             //Generate enemies and collectibles randomly but evenly across maze.
             GenerateEnemies(num_enemies);
-            total_treasure_chests_this_level = GenerateCollectibles(8, 3);
+            total_treasure_chests_this_level = GenerateCollectibles(4, 3);
 
             //Now give each of the enemies and collectibles a sprite or spritesheet
             for (int i = 0; i < maze.max_layers; i++)
@@ -627,6 +627,7 @@ namespace MazeT
         private void HandleSideScrolling()
         {
             //Side scrolling code//
+            //Only start the side scrolling once the player is near the centre of the page.
             if (player.local_position.X <= screen_width / 2 + 30 && player.local_position.X >= screen_width / 2 - 30)
             {
                 maze.pos.X += player.global_position.X - player.old_global_position.X;
@@ -636,6 +637,7 @@ namespace MazeT
                 maze.pos.Y += player.global_position.Y - player.old_global_position.Y;
             }
 
+            //Ensure that you cannot see any parts outside the maze, as there is nothing there.
             if (maze.pos.X < 0)
             {
                 maze.pos.X = 0;
