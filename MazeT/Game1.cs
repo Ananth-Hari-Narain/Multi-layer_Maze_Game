@@ -26,6 +26,7 @@ namespace MazeT
         private Vector2 prev_maze_pos = new Vector2();
         private KeyboardState previous_key_state;
         private MouseState mouse_state;
+        private MouseState previous_mouse_state;
         private int noLevelsBeaten = 0;
 
         private enum GameState
@@ -49,6 +50,7 @@ namespace MazeT
         private Texture2D heart_container_empty;
         private Texture2D heart_container_full;
         private SpriteFont score_font;
+        private SpriteFont description_font;
 
         //These are our entities and static items
         private List<CollisionCharacter>[] enemies;
@@ -72,20 +74,7 @@ namespace MazeT
         private Button controls_button;
         private Texture2D how_game_works_screen;
         private Texture2D enemy_descriptions_screen;
-        private Texture2D controls_screen;
-
-        //In-game pause menu stuff
-        private Button continue_game_button;
-        private Button quit_game_button;
-
-        //Power up menu
-        private Button powerup_box_1;
-        private Button powerup_box_2;
-        private Button powerup_box_3;
-        private int num_powerups_boxes_left;
-        private int num_enemies_killed_this_level;
-        private int num_treasure_chests_collected;
-        private int total_treasure_chests_this_level;
+        private Texture2D controls_screen;       
 
         enum StartMenuScreenState
         {
@@ -97,10 +86,24 @@ namespace MazeT
 
         StartMenuScreenState startMenuScreenState = StartMenuScreenState.MAIN_PAGE;
 
-        //In game pause menu
+        //In-game pause menu stuff
+        private Button continue_game_button;
+        private Button quit_game_button;
 
-        //Power-ups selection screen
-        
+        //Power up menu
+        private Button[] powerup_boxes = new Button[3];
+        private string[] powerup_descriptions = new string[3];
+        private bool[] powerup_boxes_are_unused = new bool[3];
+        private Button skip_power_up_button;
+        private int power_up_box_current_index;
+        private int num_powerups_boxes_left;
+        private int total_num_enemies;
+        private int num_enemies_killed_this_level;
+        private int num_treasure_chests_collected;
+        private int total_treasure_chests_this_level;
+        //determines number of hearts gained by choosing the first power up box
+        private int extra_hearts_from_power_up_box; 
+
         public Game1()
         {            
             _graphics = new GraphicsDeviceManager(this);
@@ -161,6 +164,7 @@ namespace MazeT
 
             //Load fonts
             score_font = Content.Load<SpriteFont>("fonts/score_font");
+            description_font = Content.Load<SpriteFont>("fonts/description_font");
 
             //Initialise buttons and UI images
             //Start menu
@@ -182,10 +186,16 @@ namespace MazeT
 
             //In game menu
             continue_game_button = new Button(new Point(252, 300),
-                Content.Load<Texture2D>("UI_images/play_game_button")); //Pls change soon
+                Content.Load<Texture2D>("UI_images/continue_game_button"));
 
             quit_game_button = new Button(new Point(252, 500),
-                Content.Load<Texture2D>("UI_images/how_game_works_button")); //Pls change soon
+                Content.Load<Texture2D>("UI_images/quit_game_button"));
+
+            //Power up menu - images need changing
+            powerup_boxes[0] = new Button(new Point(50, 100), Content.Load<Texture2D>("UI_images/heart_up_box"));
+            powerup_boxes[1] = new Button(new Point(300, 100), Content.Load<Texture2D>("UI_images/attack_speed_up_box"));
+            powerup_boxes[2] = new Button(new Point(550, 100), Content.Load<Texture2D>("UI_images/enemy_debuff_box"));
+            skip_power_up_button = new Button(new Point(670, 730), Content.Load<Texture2D>("UI_images/skip_button"));
         }
 
         protected override void Update(GameTime gameTime)
@@ -206,10 +216,7 @@ namespace MazeT
                 HandleCollectibles(); //Deal with picking up and updating collectibles
 
                 maze.UpdateMazeRects(prev_maze_pos - maze.pos);
-
-                previous_key_state = Keyboard.GetState();
-                prev_maze_pos = new Vector2(maze.pos.X, maze.pos.Y);
-                player.old_global_position = player.global_position;
+                
 
                 if (currentKeys.IsKeyDown(Keys.Escape))
                 {
@@ -221,8 +228,34 @@ namespace MazeT
                     && maze.current_layer == 0
                     && currentKeys.IsKeyDown(Keys.Q))
                 {
+                    //Determine the number of powerup boxes the player can select
+                    num_powerups_boxes_left = 1; //1 box awarded for completing level
+                    //1 box awarded for collecting all treasure chests
+                    if (num_treasure_chests_collected == total_treasure_chests_this_level)
+                    {
+                        num_powerups_boxes_left++; 
+                    }
+                    //1 box awarded for killing 70% of all enemies
+                    if ((double) num_enemies_killed_this_level / total_num_enemies >= 0.7)
+                    {
+                        num_powerups_boxes_left++;
+                    }
+                    //Determine the number of extra hearts the heal up powerup box will provide
+                    extra_hearts_from_power_up_box = (int) Math.Ceiling((noLevelsBeaten + 1) / 5.0) + 2;
+
+                    //Set the description of the power-ups based on the stats
+                    powerup_descriptions[0] = $"Gain {extra_hearts_from_power_up_box} extra hearts for the next level.";
+                    powerup_descriptions[1] = "Gain an attack speed up effect for 20 seconds.";
+                    powerup_descriptions[2] = "Reduce the number of enemies that spawn in the next level.";
+
+                    powerup_boxes_are_unused = new bool[]{ true, true, true };
+                    
                     game_state = GameState.END_OF_LEVEL;
                 }
+
+                //Update "previous" variables
+                prev_maze_pos = new Vector2(maze.pos.X, maze.pos.Y);
+                player.old_global_position = player.global_position;
             }
 
             //Needs finishing
@@ -282,18 +315,63 @@ namespace MazeT
             //Needs power up screen
             else if (game_state == GameState.END_OF_LEVEL)
             {
-                noLevelsBeaten++;
-                GenerateLevel();
-                game_state = GameState.MAIN_GAME;
+                if (num_powerups_boxes_left == 0)
+                {
+                    noLevelsBeaten++;
+                    GenerateLevel();
+                    //If the player selected the "attack speed up" power up box
+                    if (powerup_boxes_are_unused[1] == false)
+                    {
+                        //Give player a speed up collectible
+                        player.CollectCollectible(new Collectible(CollectibleType.ATTACKSPEEDUP, 100, Point.Zero));
+                    }
+                    game_state = GameState.MAIN_GAME;
+                }
+                else
+                {
+                    //Check which box the mouse is hovering over
+                    power_up_box_current_index = -1;
+                    for (int i = 0; i < powerup_boxes.Length; i++)
+                    {                       
+                        if (powerup_boxes[i].IsMouseOnButton(mouse_state.Position))
+                        {
+                            power_up_box_current_index = i;
+                        }
+                    }
+
+                    //Check if user clicked on the buttons
+                    if (mouse_state.LeftButton == ButtonState.Pressed 
+                        && previous_mouse_state.LeftButton == ButtonState.Released
+                        && power_up_box_current_index != -1
+                        && powerup_boxes_are_unused[power_up_box_current_index])
+                    {
+                        //Give the user the power up
+                        num_powerups_boxes_left--;
+                        //Disable that power up box so the user cannot click on it again.
+                        powerup_boxes_are_unused[power_up_box_current_index] = false;
+                    }
+                    
+                    //If the player has clicked on the skip button box
+                    if (mouse_state.LeftButton == ButtonState.Pressed
+                        && previous_mouse_state.LeftButton == ButtonState.Released
+                        && skip_power_up_button.IsMouseOnButton(mouse_state.Position))
+                    {
+                        num_powerups_boxes_left = 0;
+                    }
+                }
             }
-            
+
+            //Update "previous" variables
+            previous_key_state = Keyboard.GetState();
+            previous_mouse_state = Mouse.GetState();
+
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
             //Clear the screen so we can redraw on it
-            GraphicsDevice.Clear(Color.LightGray);
+            GraphicsDevice.Clear(Color.BurlyWood);
             
             _spriteBatch.Begin();
 
@@ -352,6 +430,29 @@ namespace MazeT
             {
                 continue_game_button.Display(_spriteBatch);
                 quit_game_button.Display(_spriteBatch);
+            }
+            else if (game_state == GameState.END_OF_LEVEL)
+            {
+                //Display power up boxes
+                foreach (Button powerup_box in powerup_boxes)
+                {
+                    powerup_box.Display(_spriteBatch);
+                }
+
+                //Display description describing power up box
+                string description = "Choose a power up box by clicking on them.\nHover over the box to see a description of the power-up." +
+                    $"\nYou can select {num_powerups_boxes_left} more box(es).";                
+                if (power_up_box_current_index != -1)
+                {
+                    description = powerup_descriptions[power_up_box_current_index];                  
+                }
+
+                _spriteBatch.DrawString(description_font, description, new Vector2(5, 400), Color.White);
+                //Display skip button description
+                _spriteBatch.DrawString(description_font, "If you don't want any power-ups, press the skip button.", 
+                    new Vector2(5, 700), Color.White);
+                //Display skip button
+                skip_power_up_button.Display(_spriteBatch);
             }
             _spriteBatch.End();
 
@@ -567,6 +668,11 @@ namespace MazeT
             prev_maze_pos = Vector2.Zero; //Reset this variable
             
             player.ResetPlayerForNextLevel(0, 0, maze.collision_rects);
+            //If the player selected the hearts up power up box
+            if (powerup_boxes_are_unused[0] == false)
+            {
+                player.health += extra_hearts_from_power_up_box;
+            }
             num_enemies_killed_this_level = 0;
             num_treasure_chests_collected = 0;
 
@@ -580,14 +686,21 @@ namespace MazeT
             
             //Determine how many enemies to generate in the maze. We want at most
             //90 enemies as otherwise it becomes too much.
-            int num_enemies= 10 * (noLevelsBeaten + 1);
-            if (num_enemies > 90)
+            total_num_enemies = 10 * (noLevelsBeaten + 1);
+            if (total_num_enemies > 90)
             {
-                num_enemies = 90;
+                total_num_enemies = 90;
+            }
+
+            //If the player selected the "less enemies" power up at the end of the level
+            //This will reduce the number of enemies by 25%
+            if (powerup_boxes_are_unused[2] == false)
+            {
+                total_num_enemies = (int)Math.Floor(total_num_enemies * 0.75);
             }
 
             //Generate enemies and collectibles randomly but evenly across maze.
-            GenerateEnemies(num_enemies);
+            GenerateEnemies(total_num_enemies);
             total_treasure_chests_this_level = GenerateCollectibles(4, 3);
 
             //Now give each of the enemies and collectibles a sprite or spritesheet
@@ -738,8 +851,8 @@ namespace MazeT
 
         private void DrawTreasureChestBar()
         {
-            _spriteBatch.Draw(treasure_chest, new Rectangle(300, -5, 40, 40), Color.White);
-            _spriteBatch.DrawString(score_font, $"{num_treasure_chests_collected}/{total_treasure_chests_this_level}", new Vector2(343, 3), Color.White);
+            _spriteBatch.Draw(treasure_chest, new Rectangle(200, -5, 40, 40), Color.White);
+            _spriteBatch.DrawString(score_font, $"{num_treasure_chests_collected}/{total_treasure_chests_this_level}", new Vector2(243, 3), Color.White);
         }
     }
 }

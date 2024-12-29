@@ -27,4 +27,21 @@ namespace MazeT
             return rect.Contains(mouse_position);
         }
     }
+
+    ///// <summary>
+    ///// This class will be used to represent the power up box, 
+    ///// which is used on one screen
+    ///// </summary>
+    //internal class PowerUpBox
+    //{
+    //    public Button button;
+    //    public string description;
+    //    public bool is_alive; //Determines if the power up box has been used or not.
+    //    public int type; //Correspond
+
+    //    public void Display(SpriteBatch sprite_batch)
+    //    {
+    //        button.Display(sprite_batch);
+    //    }
+    //}
 }

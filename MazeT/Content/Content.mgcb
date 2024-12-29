@@ -13,19 +13,19 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin fonts/description_font.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:fonts/description_font.spritefont
+
 #begin fonts/score_font.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
 /build:fonts/score_font.spritefont
-
-#begin fonts/testFont.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:fonts/testFont.spritefont
 
 #begin images/chest.png
 /importer:TextureImporter
@@ -207,6 +207,30 @@
 /processorParam:TextureFormat=Color
 /build:images/ui_heart_full.png
 
+#begin UI_images/attack_speed_up_box.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/attack_speed_up_box.png
+
+#begin UI_images/continue_game_button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/continue_game_button.png
+
 #begin UI_images/controls_button.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -219,6 +243,18 @@
 /processorParam:TextureFormat=Color
 /build:UI_images/controls_button.png
 
+#begin UI_images/enemy_debuff_box.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/enemy_debuff_box.png
+
 #begin UI_images/enemy_description_button.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -230,6 +266,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:UI_images/enemy_description_button.png
+
+#begin UI_images/heart_up_box.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/heart_up_box.png
 
 #begin UI_images/how_game_works_button.png
 /importer:TextureImporter
@@ -278,4 +326,28 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:UI_images/play_game_button.png
+
+#begin UI_images/quit_game_button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/quit_game_button.png
+
+#begin UI_images/skip_button.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI_images/skip_button.png
 
