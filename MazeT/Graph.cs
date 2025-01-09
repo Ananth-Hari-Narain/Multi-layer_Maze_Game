@@ -562,10 +562,10 @@ namespace MazeT
                         if (_tiles[x, y, z].Above || _tiles[x, y, z].Below)
                         {
                             TP_Pads[z].Add(new Rectangle(
-                                x * 128,
-                                y * 128,
-                                100,
-                                100
+                                x * 128 + 20,
+                                y * 128 + 74,
+                                40,
+                                20
                                 ));
                         }
                     }                    

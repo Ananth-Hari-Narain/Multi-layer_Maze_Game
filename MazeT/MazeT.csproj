@@ -14,6 +14,7 @@
     <Compile Remove="UI.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Content\UI_images\heart_up_box.pdn" />
     <None Remove="Icon.ico" />
     <None Remove="Icon.bmp" />
   </ItemGroup>

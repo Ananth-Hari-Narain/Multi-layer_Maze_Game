@@ -253,6 +253,12 @@ namespace MazeT
             {
                 health = 5;
             }
+            internal_iframes_timer = 0;
+            //Remove all speed up potions from player's collectibles list
+            collectibles.RemoveAll(x => x.type == CollectibleType.SPEEDUP);
+            //Reset speed
+            walking_speed = 2;
+            running_speed = 4;
         }
 
         public void Update(KeyboardState current_keys, KeyboardState previous_keys, Vector2 maze_pos, int maze_layer, int time_elapsed)
@@ -533,22 +539,25 @@ namespace MazeT
                 //2 seconds of invulnerability
                 internal_iframes_timer = iframe_length;
             }
-            
+            //If the player teleports, they take 0 damage but are given
+            //iframes. However, this needs to reset every time the player teleports.
+            if (damage_taken == 0)
+            {
+                internal_iframes_timer = iframe_length;
+            }
         }
 
         public void CollectCollectible(Collectible collectible)
         {
             collectible.BeCollected();
             //Ensure power up actually improves player's stats (if they collected a stronger power up before, don't
-            //replace that with a weaker powerup). We only need to worry about this for damage up, speed up or
-            //attack speed up power-ups
-            if (collectible.type == CollectibleType.DAMAGEUP 
-                || collectible.type == CollectibleType.SPEEDUP
+            //replace that with a weaker powerup). We only need to worry about this for speed up and attack speed
+            //up power-ups
+            if (collectible.type == CollectibleType.SPEEDUP
                 || collectible.type == CollectibleType.ATTACKSPEEDUP)
             {
                 //Firstly, dispose of the weaker powerups.
-                if (collectible.type == CollectibleType.DAMAGEUP
-                || collectible.type == CollectibleType.SPEEDUP)
+                if (collectible.type == CollectibleType.SPEEDUP)
                 {
                     collectibles.RemoveAll(item => item.value <= collectible.value && item.type == collectible.type);
                 }
@@ -566,7 +575,13 @@ namespace MazeT
                 {
                     collectibles.Add(collectible);
                 }
-            }       
+            } 
+            
+            //If the collectible is a one-time use collectible
+            else
+            {
+                collectibles.Add(collectible);
+            }
             
         }
 
@@ -582,7 +597,8 @@ namespace MazeT
                 }
                 else if (collectibles[i].type == CollectibleType.DAMAGEUP)
                 {                    
-                    power = (int) collectibles[i].value;
+                    //Change power only if the power actually increases
+                    power = Math.Max((int) collectibles[i].value, power);
                 }
                 else if (collectibles[i].type == CollectibleType.ATTACKSPEEDUP)
                 {
@@ -930,7 +946,7 @@ namespace MazeT
                 {
                     //Only choose a new destination once the enemy has reached its previously assigned destination
                     //or if a destination has not been assigned yet.
-                    if ((destination - global_position).LengthSquared() <= 25 || destination == new Vector2(-2, -2))
+                    if ((destination - global_position).LengthSquared() <= 25 || (destination.X <= -2 && destination.Y <= 2))
                     {
                         destination = maze_copy.SingleLayerNextTileFinder(enemy_tile, player_tile).ToVector2();
 

@@ -84,7 +84,7 @@ namespace MazeT
         public bool IsAlive()
         {
             //If the collectible has expired and is not a permanent power-up
-            if (self_kill_timer < 0 && type != CollectibleType.DAMAGEUP)
+            if (self_kill_timer < 0)
             {
                 return false;
             }
@@ -94,7 +94,9 @@ namespace MazeT
         public void BeCollected()
         {
             is_collected = true;
-            if (type == CollectibleType.HEAL || type == CollectibleType.TREASURE_CHEST)
+            if (type == CollectibleType.HEAL 
+                || type == CollectibleType.TREASURE_CHEST
+                || type == CollectibleType.DAMAGEUP)
             {
                 //This collectible "dies" instantly as it is a one use item
                 self_kill_timer = 1; 
